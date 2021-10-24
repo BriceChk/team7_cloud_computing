@@ -13,6 +13,8 @@
         #messages { list-style-type: none; margin: 0; padding: 0; }
         #messages > li { padding: 0.5rem 1rem; }
         #messages > li:nth-child(odd) { background: #efefef; }
+
+        .message-time { color: #434651;}
     </style>
 </head>
 <body>
@@ -43,15 +45,23 @@
     var usernames = document.getElementById('usernames');
     var form = document.getElementById('form');
     var input = document.getElementById('input');
-
+    var url = window.location.search;
+    var urlParams = new URLSearchParams(url);
     var username;
-    let popup = prompt("Enter a username:", "");
-    if (popup == null) {
+
+    if(urlParams.get("user") === "taken"){
+        popup = prompt("Username already taken, please enter another username:", "");
+    }
+    else{
+        popup = prompt("Enter a username:", "");
+    }
+    if (popup === '') {
         username = "Anonymous user";
     } else {
         username = popup;
     }
-    socket.emit('user connected', username);
+
+    socket.emit('user connected', {user:username , id:socket.id});
     socket.emit('new username', username);
 
     form.addEventListener('submit', function(e) {
@@ -61,9 +71,20 @@
             input.value = '';
         }
     });
-    socket.on('chat message', function(msg) {
+
+    socket.on('chat message', function(data) {
+        var date = new Date();
+        var hour = date.getHours();
+        var minute = date.getMinutes();
+        var seconds = date.getSeconds();
+        var fullTime = hour +':'+ minute +':'+ seconds;
+
         var item = document.createElement('li');
-        item.textContent = msg;
+
+        item.innerHTML = "<div>\n" +
+            "            <span class=\"message-time\">" + fullTime + " by " + data.user + "</span>\n" +
+            "        </div>\n" +
+            "        <div>" + data.msg + "</div>";
         messages.appendChild(item);
         window.scrollTo(0, document.body.scrollHeight);
     });
@@ -86,6 +107,9 @@
             item.textContent = element;
             usernames.appendChild(item);
         });
+    });
+    socket.on('username taken', function() {
+        window.location.href = "?user=taken";
     });
 </script>
 </body>

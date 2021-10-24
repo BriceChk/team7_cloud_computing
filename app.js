@@ -10,20 +10,29 @@ app.get('/', (req, res) => {  res.sendFile(__dirname + '/index.html');});
 
 io.on('connection', (socket) => {
 
-    socket.on('user connected', (msg) => {
-        var username = msg;
-        socket.username = username;
-        userList.push(username);
-        io.emit('user connected', socket.username + " has joined the chat!");
+    socket.on('user connected', function(msg) {
+        var username = msg.user;
+        var id = msg.id;
+
+        if(userList.indexOf(username) === -1){
+            socket.username = username;
+            userList.push(username);
+            io.emit('user connected', socket.username + " has joined the chat!");
+        } else{
+            io.to(id).emit('username taken');
+        }
     });
 
     socket.on('disconnect', () => {
-        userList = userList.filter(e => e !== socket.username);
-        io.emit("user disconnected", socket.username + " has left the chat!");
+        if(socket.username !== undefined){
+            userList = userList.filter(e => e !== socket.username);
+            io.emit("user disconnected", socket.username + " has left the chat!");
+            io.emit('new username', userList);
+        }
     });
 
     socket.on('chat message', (msg) => {
-        io.emit('chat message', msg);
+        io.emit('chat message', {msg:msg , user:socket.username});
     });
 
     socket.on('new username', (msg) => {
