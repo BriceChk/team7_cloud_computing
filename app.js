@@ -9,32 +9,45 @@ let userList = [];
 app.get('/', (req, res) => {  res.sendFile(__dirname + '/index.html');});
 
 io.on('connection', (socket) => {
-
+    //Call when a new user enter the room
     socket.on('user connected', function(msg) {
+        //Get the parameters
         var username = msg.user;
         var id = msg.id;
-
+        //Verify that the username is not already taken
         if(userList.indexOf(username) === -1){
+            //If the username is not taken
+            //Assign the username to the socket
             socket.username = username;
+            //Push the username in the Userlist
             userList.push(username);
+            //Send a message in the chat with the username
             io.emit('user connected', socket.username + " has joined the chat!");
         } else{
+            //If the username is taken we call the client functio 'username taken' of the correct socket
             io.to(id).emit('username taken');
         }
     });
 
+    //When a user disconnect
     socket.on('disconnect', () => {
+        //Verify that he has a username
         if(socket.username !== undefined){
+            //Delete the username from the list
             userList = userList.filter(e => e !== socket.username);
+            //Send the message in the chat
             io.emit("user disconnected", socket.username + " has left the chat!");
+            //Call the function 'new username' of each clients to update the user list
             io.emit('new username', userList);
         }
     });
 
+    //Fuction to send a message in the chat with the username
     socket.on('chat message', (msg) => {
         io.emit('chat message', {msg:msg , user:socket.username});
     });
 
+    //Function to update the user list that are connected
     socket.on('new username', (msg) => {
         io.emit('new username', userList);
     });
