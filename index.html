@@ -3,21 +3,77 @@
 <head>
     <title>Chat</title>
     <style>
-        body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body {
+            margin: 0;
+            padding-bottom: 3rem;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
 
-        #form { background: rgba(0, 0, 0, 0.15); padding: 0.25rem; position: fixed; bottom: 0; width: 75%; display: flex; height: 3rem; box-sizing: border-box; backdrop-filter: blur(10px); }
-        #input { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
-        #input:focus { outline: none; }
-        #form > button { background: #333; border: none; padding: 0 1rem; margin: 0.25rem; border-radius: 3px; outline: none; color: #fff; }
+        #form {
+            background: rgba(0, 0, 0, 0.15);
+            padding: 0.25rem;
+            position: fixed;
+            bottom: 0;
+            width: 75%;
+            display: flex;
+            height: 3rem;
+            box-sizing: border-box;
+            backdrop-filter: blur(10px);
+        }
 
-        #messages { list-style-type: none; margin: 0; padding: 0; }
-        #messages > li { padding: 0.5rem 1rem; }
-        #messages > li:nth-child(odd) { background: #efefef; }
-        #conversations { padding-left: 5px; }
-        #conversations > li { list-style-type: none; margin: 5px; background: #efefef; }
-        #conversations > li > button { width: 100%}
+        #input {
+            border: none;
+            padding: 0 1rem;
+            flex-grow: 1;
+            border-radius: 2rem;
+            margin: 0.25rem;
+        }
 
-        .message-time { color: #434651;}
+        #input:focus {
+            outline: none;
+        }
+
+        #form > button {
+            background: #333;
+            border: none;
+            padding: 0 1rem;
+            margin: 0.25rem;
+            border-radius: 3px;
+            outline: none;
+            color: #fff;
+        }
+
+        #messages {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        #messages > li {
+            padding: 0.5rem 1rem;
+        }
+
+        #messages > li:nth-child(odd) {
+            background: #efefef;
+        }
+
+        #conversations {
+            padding-left: 5px;
+        }
+
+        #conversations > li {
+            list-style-type: none;
+            margin: 5px;
+            background: #efefef;
+        }
+
+        #conversations > li > button {
+            width: 100%
+        }
+
+        .message-time {
+            color: #434651;
+        }
     </style>
 </head>
 <body>
@@ -30,14 +86,18 @@
     <tr>
         <td style="vertical-align:top">
             <ul id="conversations">
-                <li><button onclick="newConversation();">Create a conversation</button></li>
-                <li><button onclick="showGlobal();">Global chat</button></li>
+                <li>
+                    <button onclick="newConversation();">Create a conversation</button>
+                </li>
+                <li>
+                    <button onclick="showGlobal();">Global chat</button>
+                </li>
             </ul>
         </td>
         <td>
             <ul id="messages">
                 <form id="form" action="">
-                    <input id="input" autocomplete="off" />
+                    <input id="input" autocomplete="off"/>
                     <button>Send</button>
                 </form>
             </ul>
@@ -51,25 +111,24 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-    var socket = io();
+    let socket = io();
     //HTML parameters
-    var messages = document.getElementById('messages');
-    var usernames = document.getElementById('usernames');
-    var form = document.getElementById('form');
-    var input = document.getElementById('input');
-    var userList;
+    let messages = document.getElementById('messages');
+    let usernames = document.getElementById('usernames');
+    let form = document.getElementById('form');
+    let input = document.getElementById('input');
+    let userList;
 
     //Popup with username parameters
-    var url = window.location.search;
-    var urlParams = new URLSearchParams(url);
-    var username;
+    let url = window.location.search;
+    let urlParams = new URLSearchParams(url);
+    let username;
 
     //If we have the get parameter user with the value taken
-    if(urlParams.get("user") === "taken"){
+    if (urlParams.get("user") === "taken") {
         //Display the popup and ask to enter a new username
         popup = prompt("Username already taken, please enter another username:", "");
-    }
-    else{
+    } else {
         //If we don't have this parameter we display the basic popup
         popup = prompt("Enter a username:", "");
     }
@@ -81,11 +140,11 @@
     }
 
     //Call the server functions 'user connected' with the username and socket id, and 'new username' to update the user list
-    socket.emit('user connected', {user:username , id:socket.id});
+    socket.emit('user connected', {user: username, id: socket.id});
     socket.emit('new username', username);
 
     //Verify if a message is sent and call the function 'chat message'
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', function (e) {
         e.preventDefault();
         if (input.value) {
             socket.emit('chat message', input.value);
@@ -94,14 +153,14 @@
     });
 
     //Display the message in the chat with the username and the time
-    socket.on('chat message', function(data) {
-        var date = new Date();
-        var hour = date.getHours();
-        var minute = date.getMinutes();
-        var seconds = date.getSeconds();
-        var fullTime = hour +':'+ minute +':'+ seconds;
+    socket.on('chat message', function (data) {
+        let date = new Date();
+        let hour = date.getHours();
+        let minute = date.getMinutes();
+        let seconds = date.getSeconds();
+        let fullTime = hour + ':' + minute + ':' + seconds;
 
-        var item = document.createElement('li');
+        let item = document.createElement('li');
 
         item.innerHTML = "<div>\n" +
             "            <span class=\"message-time\">" + fullTime + " by " + data.user + "</span>\n" +
@@ -112,86 +171,86 @@
     });
 
     //Display a message when a user disconnected
-    socket.on('user disconnected', function(msg) {
-        var item = document.createElement('li');
+    socket.on('user disconnected', function (msg) {
+        let item = document.createElement('li');
         item.textContent = msg;
         messages.appendChild(item);
         window.scrollTo(0, document.body.scrollHeight);
     });
 
     //Display a message when a new user is connected
-    socket.on('user connected', function(msg) {
-        var item = document.createElement('li');
+    socket.on('user connected', function (msg) {
+        let item = document.createElement('li');
         item.textContent = msg;
         messages.appendChild(item);
         window.scrollTo(0, document.body.scrollHeight);
     });
 
     //Refresh the user list
-    socket.on('new username', function(msg) {
+    socket.on('new username', function (msg) {
         userList = msg;
         usernames.innerHTML = "";
-        msg.forEach((element)=>{
-            var item = document.createElement('li');
+        msg.forEach((element) => {
+            let item = document.createElement('li');
             item.textContent = element;
             usernames.appendChild(item);
         });
     });
 
     //Reload the page with the parameters user=taken
-    socket.on('username taken', function() {
+    socket.on('username taken', function () {
         window.location.href = "?user=taken";
     });
 
 
-
-    function showGlobal(){
-        ulMessages = document.getElementById("messages");
-        createConversation = document.getElementById("createConversation");
-        if(ulMessages.style.display === "none"){
+    function showGlobal() {
+        let ulMessages = document.getElementById("messages");
+        let createConversation = document.getElementById("createConversation");
+        if (ulMessages.style.display === "none") {
             ulMessages.style.display = "";
             createConversation.style.display = "none";
         }
 
     }
-    function newConversation(){
-        createConversation = document.getElementById("createConversation");
-        createConversation.innerHTML = "";
-        ulMessages = document.getElementById("messages");
-        ulMessages.style.display="none";
-        createConversation.style.display = "";
-        var br = document.createElement('br');
 
-        var item = document.createElement('p');
+    function newConversation() {
+        let createConversation = document.getElementById("createConversation");
+        createConversation.innerHTML = "";
+        let ulMessages = document.getElementById("messages");
+        ulMessages.style.display = "none";
+        createConversation.style.display = "";
+        let br = document.createElement('br');
+
+        let item = document.createElement('p');
         item.textContent = "Please select the users of the conversation :";
         createConversation.appendChild(item);
 
-        userList.forEach((element)=>{
-            var input = document.createElement('input');
-            input.type="checkbox";
-            input.name=element;
-            input.value=element;
+        userList.forEach((element) => {
+            let input = document.createElement('input');
+            input.type = "checkbox";
+            input.name = element;
+            input.value = element;
             input.textContent = element;
             createConversation.appendChild(input);
-            var label = document.createElement('label');
-            label.htmlFor=element;
-            label.textContent=element;
+            let label = document.createElement('label');
+            label.htmlFor = element;
+            label.textContent = element;
             createConversation.appendChild(label);
-            var br = document.createElement('br');
+            let br = document.createElement('br');
             createConversation.appendChild(br);
         });
 
-        var label = document.createElement('label');
-        label.htmlFor="nameConversation";
-        label.textContent="Name of the conversation : ";
+        let label = document.createElement('label');
+        label.htmlFor = "nameConversation";
+        label.textContent = "Name of the conversation : ";
         createConversation.appendChild(label);
-        var input = document.createElement('input');
-        input.name="nameConversation";
+        let input = document.createElement('input');
+        input.name = "nameConversation";
         createConversation.appendChild(input);
         createConversation.appendChild(br);
 
-        var button = document.createElement('button');
-        button.textContent="Create";
+        let button = document.createElement('button');
+        button.textContent = "Create";
         createConversation.appendChild(button);
     }
 </script>

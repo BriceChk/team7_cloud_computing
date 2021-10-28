@@ -2,20 +2,22 @@ const express = require('express');
 const app = express();
 const http = require('http');
 const server = http.createServer(app);
-const { Server } = require("socket.io");
+const {Server} = require("socket.io");
 const io = new Server(server);
 let userList = [];
 
-app.get('/', (req, res) => {  res.sendFile(__dirname + '/index.html');});
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/index.html');
+});
 
 io.on('connection', (socket) => {
     //Call when a new user enter the room
-    socket.on('user connected', function(msg) {
+    socket.on('user connected', function (msg) {
         //Get the parameters
-        var username = msg.user;
-        var id = msg.id;
+        let username = msg.user;
+        let id = msg.id;
         //Verify that the username is not already taken
-        if(userList.indexOf(username) === -1){
+        if (userList.indexOf(username) === -1) {
             //If the username is not taken
             //Assign the username to the socket
             socket.username = username;
@@ -23,8 +25,8 @@ io.on('connection', (socket) => {
             userList.push(username);
             //Send a message in the chat with the username
             io.emit('user connected', socket.username + " has joined the chat!");
-        } else{
-            //If the username is taken we call the client functio 'username taken' of the correct socket
+        } else {
+            //If the username is taken we call the client function 'username taken' of the correct socket
             io.to(id).emit('username taken');
         }
     });
@@ -32,7 +34,7 @@ io.on('connection', (socket) => {
     //When a user disconnect
     socket.on('disconnect', () => {
         //Verify that he has a username
-        if(socket.username !== undefined){
+        if (socket.username !== undefined) {
             //Delete the username from the list
             userList = userList.filter(e => e !== socket.username);
             //Send the message in the chat
@@ -42,13 +44,13 @@ io.on('connection', (socket) => {
         }
     });
 
-    //Fuction to send a message in the chat with the username
+    //Function to send a message in the chat with the username
     socket.on('chat message', (msg) => {
-        io.emit('chat message', {msg:msg , user:socket.username});
+        io.emit('chat message', {msg: msg, user: socket.username});
     });
 
     //Function to update the user list that are connected
-    socket.on('new username', (msg) => {
+    socket.on('new username', () => {
         io.emit('new username', userList);
     });
 });
