@@ -5,6 +5,7 @@ const server = http.createServer(app);
 const {Server} = require("socket.io");
 const io = new Server(server);
 let userList = [];
+let conversationList = [];
 
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
@@ -52,6 +53,16 @@ io.on('connection', (socket) => {
     //Function to update the user list that are connected
     socket.on('new username', () => {
         io.emit('new username', userList);
+    });
+
+    //Function to update the user list that are connected
+    socket.on('new conversation', function (msg) {
+        let conversation = {
+            name: msg.name,
+            users: msg.users
+        };
+        conversationList.push(conversation);
+        io.emit('new conversation', conversation);
     });
 });
 
