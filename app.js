@@ -62,7 +62,6 @@ io.on('connection', (socket) => {
             name: msg.name,
             users: msg.users
         };
-        console.log(msg);
         conversationList.push(conversation);
         clients.forEach((element) => {
             (msg.users).forEach((convUser) => {
