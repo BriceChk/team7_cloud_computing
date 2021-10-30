@@ -43,17 +43,17 @@
             color: #fff;
         }
 
-        #messages {
+        #chat > ul {
             list-style-type: none;
             margin: 0;
             padding: 0;
         }
 
-        #messages > li {
+        #chat > ul > li {
             padding: 0.5rem 1rem;
         }
 
-        #messages > li:nth-child(odd) {
+        #chat > ul > li:nth-child(odd) {
             background: #efefef;
         }
 
@@ -90,11 +90,11 @@
                     <button onclick="newConversation();">Create a conversation</button>
                 </li>
                 <li>
-                    <button onclick="showGlobal();">Global chat</button>
+                    <button onclick="showConversation('messages');">Global chat</button>
                 </li>
             </ul>
         </td>
-        <td>
+        <td id="chat">
             <ul id="messages">
                 <form id="form" action="">
                     <input id="input" autocomplete="off"/>
@@ -125,6 +125,7 @@
     let formConversation = document.getElementById('formConversation');
     let createConversation = document.getElementById("createConversation");
     let ulMessages = document.getElementById("messages");
+    let chat = document.getElementById("chat");
     let userList;
     let conversationList = [];
 
@@ -216,11 +217,14 @@
         e.preventDefault();
         let nameConversation = document.getElementById('nameConversation');
         let userConversationList = [];
+        userConversationList.push(username);
 
         userList.forEach((element) => {
-            let checkedUser = document.getElementById(element);
-            if(checkedUser.value !== null){
-                userConversationList.push(checkedUser.value);
+            if(element !== username) {
+                let checkedUser = document.getElementById(element);
+                if (checkedUser.checked) {
+                    userConversationList.push(checkedUser.value);
+                }
             }
         });
 
@@ -228,7 +232,6 @@
             socket.emit('new conversation', {users: userConversationList , name: nameConversation.value});
             nameConversation.value="";
         }
-
     });
 
     //Add the conversation to the list and display it
@@ -237,55 +240,77 @@
         let item = document.createElement('li');
         let button = document.createElement('button');
         button.textContent = msg.name;
+        button.onclick = function(){
+            showConversation(msg.name);
+        };
         item.appendChild(button);
         conversations.appendChild(item);
+
+        item = document.createElement('ul');
+        item.id = msg.name;
+        item.style.cssText="display: none;";
+        let form = document.createElement('form');
+        form.id="form";
+        form.action="";
+        form.innerHTML="" +
+            "<input id=\"input\" autoComplete=\"off\"/>\n" +
+            "                <button>Send</button>";
+        item.appendChild(form);
+        chat.appendChild(item);
     });
 
-    function showGlobal() {
-        if (ulMessages.style.display === "none") {
-            ulMessages.style.display = "";
-            createConversation.style.display = "none";
-        }
+    function showConversation(name){
+        conversationList.forEach((element) => {
+            let conv = document.getElementById(element.name);
+            conv.style.display="none";
+        });
+        ulMessages.style.display="none";
+        createConversation.style.display = "none";
+        let ul = document.getElementById(name);
+        ul.style.display="";
     }
 
     function newConversation() {
         formConversation.innerHTML = "";
         ulMessages.style.display = "none";
+        conversationList.forEach((element) => {
+            let conv = document.getElementById(element.name);
+            conv.style.display="none";
+        });
         createConversation.style.display = "";
         let br = document.createElement('br');
 
         userList.forEach((element) => {
-            let input = document.createElement('input');
-            input.type = "checkbox";
-            input.id=element;
-            input.name = element;
-            input.value = element;
-            input.textContent = element;
-            createConversation.appendChild(input);
-            formConversation.appendChild(input);
-            let label = document.createElement('label');
-            label.htmlFor = element;
-            label.textContent = element;
-            //createConversation.appendChild(label);
-            formConversation.appendChild(label);
-            let br = document.createElement('br');
-            formConversation.appendChild(br);
+            if(element !== username) {
+                let input = document.createElement('input');
+                input.type = "checkbox";
+                input.id = element;
+                input.name = element;
+                input.value = element;
+                input.textContent = element;
+                createConversation.appendChild(input);
+                formConversation.appendChild(input);
+
+                let label = document.createElement('label');
+                label.htmlFor = element;
+                label.textContent = element;
+                formConversation.appendChild(label);
+                let br = document.createElement('br');
+                formConversation.appendChild(br);
+            }
         });
 
         let label = document.createElement('p');
         label.textContent = "Name of the conversation : ";
         label.style.margin='0';
-        //createConversation.appendChild(label);
         formConversation.appendChild(label);
         let input = document.createElement('input');
         input.id = "nameConversation";
-        //createConversation.appendChild(input);
         formConversation.appendChild(input);
         formConversation.appendChild(br);
 
         let button = document.createElement('button');
         button.textContent = "Create";
-        //createConversation.appendChild(button);
         formConversation.appendChild(button);
     }
 

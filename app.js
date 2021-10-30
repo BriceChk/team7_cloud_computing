@@ -57,12 +57,20 @@ io.on('connection', (socket) => {
 
     //Function to update the user list that are connected
     socket.on('new conversation', function (msg) {
+        let clients = io.sockets.sockets;
         let conversation = {
             name: msg.name,
             users: msg.users
         };
+        console.log(msg);
         conversationList.push(conversation);
-        io.emit('new conversation', conversation);
+        clients.forEach((element) => {
+            (msg.users).forEach((convUser) => {
+                if(element["username"] === convUser ){
+                    io.to(element.id).emit('new conversation', conversation);
+                }
+            });
+        });
     });
 });
 
