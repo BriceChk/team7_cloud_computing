@@ -73,7 +73,7 @@ io.on('connection', (socket) => {
         conversationList.push(conversation);
         clients.forEach((element) => {
             (msg.users).forEach((convUser) => {
-                if(element["username"] === convUser ){
+                if (element["username"] === convUser) {
                     io.to(element.id).emit('new conversation', conversation);
                 }
             });

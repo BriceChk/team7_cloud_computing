@@ -103,7 +103,7 @@ formConversation.addEventListener('submit', function (e) {
     userConversationList.push(username);
 
     userList.forEach((element) => {
-        if(element !== username) {
+        if (element !== username) {
             let checkedUser = document.getElementById(element);
             if (checkedUser.checked) {
                 userConversationList.push(checkedUser.value);
@@ -112,8 +112,8 @@ formConversation.addEventListener('submit', function (e) {
     });
 
     if (nameConversation.value) {
-        socket.emit('new conversation', {users: userConversationList , name: nameConversation.value});
-        nameConversation.value="";
+        socket.emit('new conversation', {users: userConversationList, name: nameConversation.value});
+        nameConversation.value = "";
     }
 });
 
@@ -123,7 +123,7 @@ socket.on('new conversation', function (msg) {
     let item = document.createElement('li');
     let button = document.createElement('button');
     button.textContent = msg.name;
-    button.onclick = function(){
+    button.onclick = function () {
         showConversation(msg.name);
     };
     item.appendChild(button);
@@ -131,26 +131,26 @@ socket.on('new conversation', function (msg) {
 
     item = document.createElement('ul');
     item.id = msg.name;
-    item.style.cssText="display: none;";
+    item.style.cssText = "display: none;";
     let form = document.createElement('form');
-    form.id="form";
-    form.action="";
-    form.innerHTML="" +
+    form.id = "form";
+    form.action = "";
+    form.innerHTML = "" +
         "<input id=\"input\" autoComplete=\"off\"/>\n" +
         "                <button>Send</button>";
     item.appendChild(form);
     chat.appendChild(item);
 });
 
-function showConversation(name){
+function showConversation(name) {
     conversationList.forEach((element) => {
         let conv = document.getElementById(element.name);
-        conv.style.display="none";
+        conv.style.display = "none";
     });
-    ulMessages.style.display="none";
+    ulMessages.style.display = "none";
     createConversation.style.display = "none";
     let ul = document.getElementById(name);
-    ul.style.display="";
+    ul.style.display = "";
 }
 
 function newConversation() {
@@ -158,13 +158,13 @@ function newConversation() {
     ulMessages.style.display = "none";
     conversationList.forEach((element) => {
         let conv = document.getElementById(element.name);
-        conv.style.display="none";
+        conv.style.display = "none";
     });
     createConversation.style.display = "";
     let br = document.createElement('br');
 
     userList.forEach((element) => {
-        if(element !== username) {
+        if (element !== username) {
             let input = document.createElement('input');
             input.type = "checkbox";
             input.id = element;
@@ -185,7 +185,7 @@ function newConversation() {
 
     let label = document.createElement('p');
     label.textContent = "Name of the conversation : ";
-    label.style.margin='0';
+    label.style.margin = '0';
     formConversation.appendChild(label);
     let input = document.createElement('input');
     input.id = "nameConversation";
