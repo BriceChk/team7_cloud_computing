@@ -11,6 +11,14 @@ app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
 
+app.get('/style.css', (req, res) => {
+    res.sendFile(__dirname + '/style.css');
+});
+
+app.get('/client.js', (req, res) => {
+    res.sendFile(__dirname + '/client.js');
+});
+
 io.on('connection', (socket) => {
     //Call when a new user enter the room
     socket.on('user connected', function (msg) {
