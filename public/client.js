@@ -299,6 +299,10 @@ function populateMessageList() {
 }
 
 function buildMessage(message) {
+    if (message.special) {
+        return $('<div class="special-msg">' + message.sender + ' has ' + message.content + ' the chat</div>');
+    }
+
     let clone = $('#models .msg').clone();
     clone.find('.msg-sender').text(message.sender);
     clone.find('.msg-content').text(message.content);

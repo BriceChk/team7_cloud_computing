@@ -96,3 +96,9 @@ hr {
     color: #6c757d;
     font-size: x-small;
 }
+
+.special-msg {
+    width: 100%;
+    text-align: center;
+    font-style: italic;
+}

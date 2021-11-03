@@ -97,6 +97,7 @@ io.on('connection', (socket) => {
 
             // Tell everyone a new user has connected
             //TODO io.emit('user-connected', socket.username + " has joined the chat!");
+            sendMessage('global', 'joined', socket, true);
             emitUserList();
         }
     });
@@ -107,7 +108,7 @@ io.on('connection', (socket) => {
         if (socket.username !== undefined) {
             data.users[socket.username].online = false;
             console.log('User ' + socket.username + ' has disconnected');
-            //TODO io.emit("user disconnected", socket.username + " has left the chat!");
+            sendMessage('global', 'left', socket, true);
             emitUserList();
         }
     });
@@ -199,7 +200,7 @@ io.on('connection', (socket) => {
     });
 });
 
-function sendMessage(convId, content, socket) {
+function sendMessage(convId, content, socket, specialMessage) {
     let timestamp = new Date().getTime();
 
     //TODO Check if user is part of conversation
@@ -211,6 +212,10 @@ function sendMessage(convId, content, socket) {
             timestamp: timestamp
         },
         conversationId: convId
+    }
+
+    if (specialMessage) {
+        response.message.special = true;
     }
 
     if (convId === 'global') {
