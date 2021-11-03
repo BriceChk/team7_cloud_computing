@@ -280,6 +280,22 @@ function populateMessageList() {
     messages.forEach(msg => {
         msgList.append(buildMessage(msg));
     });
+
+    let groupUserListContainer = $('#group-user-list-container');
+    groupUserListContainer.hide();
+    if (currentConversationId !== 'global') {
+        let conv = data.conversations[currentConversationId];
+        if (conv.participants.length > 2) {
+            groupUserListContainer.show();
+            let list = $('#group-user-list');
+            list.empty();
+            conv.participants.forEach(p => {
+                let clone = $('#models .user-item').clone();
+                clone.find('.username').text(p);
+                list.append(clone);
+            });
+        }
+    }
 }
 
 function buildMessage(message) {
