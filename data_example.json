@@ -15,6 +15,9 @@
       "timestamp": 123123123123
     }
   ],
+  "globalUploads": [
+
+  ],
   "conversations": {
     "convID1234": {
       "name": "Lorem ipsum",
@@ -29,6 +32,9 @@
           "content": "Lorem ipsum",
           "timestamp": 123123123123
         }
+      ],
+      "uploads": [
+        "file_name"
       ]
     }
   }

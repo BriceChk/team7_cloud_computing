@@ -3,6 +3,16 @@
 let socket = io();
 const uploader = new SocketIOFileUpload(socket);
 uploader.listenOnInput(document.getElementById("siofu_input"));
+uploader.addEventListener('start', function (event) {
+    socket.emit('start-upload', {
+        conversationId: currentConversationId,
+        fileName: event.file.name
+    });
+});
+
+uploader.addEventListener('complete', function (event) {
+    bootstrap.Modal.getInstance(document.getElementById('sendFileModal')).hide();
+});
 
 let username = '';
 let data = {

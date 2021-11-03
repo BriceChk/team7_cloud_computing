@@ -10,37 +10,46 @@ const app = express().use(SocketIOFileUpload.router);
 const server = http.createServer(app);
 const io = new Server(server);
 
+let hostname = '';
 
 // Database
 let data = {
     users: {},
     globalMessages: [],
+    globalUploads: [],
     conversations: {}
 };
 
 // Serve client files
 app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
+    res.sendFile(__dirname + '/public/index.html');
+    hostname = req.header('host');
 });
 
-app.get('/style.css', (req, res) => {
-    res.sendFile(__dirname + '/style.css');
-});
-
-app.get('/client.js', (req, res) => {
-    res.sendFile(__dirname + '/client.js');
-});
+app.use(express.static('public'));
 
 // Handle socket connections
 io.on('connection', (socket) => {
     const uploader = new SocketIOFileUpload();
-    uploader.dir = __dirname + "/uploads";
+    uploader.dir = __dirname + "/public/uploads";
     uploader.listen(socket);
 
     uploader.on('saved', function (event) {
         if (event.file.success) {
             let parts = event.file.pathName.replace(/\\/g, '/').split('/');
-            console.log('uploads/' + parts[parts.length - 1]);
+            let fileLink = '/uploads/' + parts[parts.length - 1];
+            console.log('finish upload');
+            Object.keys(data.conversations).forEach(convId => {
+                let conv = data.conversations[convId];
+                if (conv.uploads && conv.uploads.includes(event.file.name)) {
+                    sendMessage(convId, 'I attached a file: http://' + hostname + fileLink, socket);
+                    conv.uploads.splice(conv.uploads.indexOf(event.file.name), 1);
+                }
+            });
+            if (data.globalUploads.includes(event.file.name)) {
+                sendMessage('global', 'I attached a file: http://' + hostname + fileLink, socket);
+                data.globalUploads.splice(data.globalUploads.indexOf(event.file.name), 1);
+            }
         }
     });
 
@@ -106,30 +115,8 @@ io.on('connection', (socket) => {
     // Function to send a message in the chat with the username
     socket.on('chat-message', (received) => {
         let { content, conversation } = received;
-        let timestamp = new Date().getTime();
-
-        //TODO Check if user is part of conversation
-
-        let response = {
-            message: {
-                sender: socket.username,
-                content: content,
-                timestamp: timestamp
-            },
-            conversationId: conversation
-        }
-
-        if (conversation === 'global') {
-            data.globalMessages.push(response.message);
-            io.emit('message', response)
-        } else {
-            let conv = data.conversations[conversation];
-            if (!conv) {
-
-            }
-            data.conversations[conversation].messages.push(response.message);
-            io.to(conversation).emit('message', response);
-        }
+        sendMessage(conversation, content, socket
+        );
     });
 
     // Function to create a new private conversation
@@ -195,7 +182,49 @@ io.on('connection', (socket) => {
             conversationId: id
         });
     });
+
+    socket.on('start-upload', (received) => {
+        let { conversationId, fileName } = received;
+        console.log('start upload ' + fileName);
+        if (conversationId === 'global') {
+            data.globalUploads.push(fileName);
+        } else {
+            let conv = data.conversations[conversationId];
+            if (conv.uploads) {
+                conv.uploads.push(fileName);
+            } else {
+                conv.uploads = [ fileName ];
+            }
+        }
+    });
 });
+
+function sendMessage(convId, content, socket) {
+    let timestamp = new Date().getTime();
+
+    //TODO Check if user is part of conversation
+
+    let response = {
+        message: {
+            sender: socket.username,
+            content: content,
+            timestamp: timestamp
+        },
+        conversationId: convId
+    }
+
+    if (convId === 'global') {
+        data.globalMessages.push(response.message);
+        io.emit('message', response)
+    } else {
+        let conv = data.conversations[convId];
+        if (!conv) {
+
+        }
+        data.conversations[convId].messages.push(response.message);
+        io.to(convId).emit('message', response);
+    }
+}
 
 // Emit the list of online users
 function emitUserList() {
