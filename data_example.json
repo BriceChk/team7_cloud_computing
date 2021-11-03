@@ -1,0 +1,35 @@
+{
+  "users": {
+    "username1": {
+      "conversations": [
+        "convID1234",
+        "convID4567"
+      ],
+      "online": true
+    }
+  },
+  "globalMessages": [
+    {
+      "sender": "<username>",
+      "content": "Lorem ipsum",
+      "timestamp": 123123123123
+    }
+  ],
+  "conversations": {
+    "convID1234": {
+      "name": "Lorem ipsum",
+      "participants": [
+        "username1",
+        "username2",
+        "username3"
+      ],
+      "messages": [
+        {
+          "sender": "<username>",
+          "content": "Lorem ipsum",
+          "timestamp": 123123123123
+        }
+      ]
+    }
+  }
+}

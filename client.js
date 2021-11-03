@@ -1,198 +1,317 @@
+// AUTHORS: GROUP 7 - Mickaël BENASSE (805211), Brice CHKIR (805212), Joffrey COLLET (805213)
+
 let socket = io();
-//HTML parameters
-let messages = document.getElementById('messages');
-let usernames = document.getElementById('usernames');
-let conversations = document.getElementById("conversations");
-let form = document.getElementById('form');
-let input = document.getElementById('input');
-let formConversation = document.getElementById('formConversation');
-let createConversation = document.getElementById("createConversation");
-let ulMessages = document.getElementById("messages");
-let chat = document.getElementById("chat");
-let userList;
-let conversationList = [];
+let username = '';
+let data = {
+    globalMessages: [],
+    conversations: {}
+};
+let users = [];
+let currentConversationId = 'global';
 
-//Popup with username parameters
-let url = window.location.search;
-let urlParams = new URLSearchParams(url);
-let username;
+$(document).ready(() => {
+    $('#chat-list-parent').on('click', '.conversation-item', function () {
+        $('.conversation-item').removeClass('active');
+        $(this).addClass('active').removeClass('new-message');
 
-//If we have the get parameter user with the value taken
-if (urlParams.get("user") === "taken") {
-    //Display the popup and ask to enter a new username
-    popup = prompt("Username already taken, please enter another username:", "");
-} else {
-    //If we don't have this parameter we display the basic popup
-    popup = prompt("Enter a username:", "");
-}
-//If the popup is empty the username will be "Anonymous user"
-if (popup === '') {
-    username = "Anonymous user";
-} else {
-    username = popup;
-}
-
-//Call the server functions 'user connected' with the username and socket id, and 'new username' to update the user list
-socket.emit('user connected', {user: username, id: socket.id});
-socket.emit('new username', username);
-
-//Verify if a message is sent and call the function 'chat message'
-form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    if (input.value) {
-        socket.emit('chat message', input.value);
-        input.value = '';
-    }
-});
-
-//Display the message in the chat with the username and the time
-socket.on('chat message', function (data) {
-    let date = new Date();
-    let hour = date.getHours();
-    let minute = date.getMinutes();
-    let seconds = date.getSeconds();
-    let fullTime = hour + ':' + minute + ':' + seconds;
-
-    let item = document.createElement('li');
-
-    item.innerHTML = "<div>\n" +
-        "            <span class=\"message-time\">" + fullTime + " by " + data.user + "</span>\n" +
-        "        </div>\n" +
-        "        <div>" + data.msg + "</div>";
-    messages.appendChild(item);
-    window.scrollTo(0, document.body.scrollHeight);
-});
-
-//Display a message when a user disconnected
-socket.on('user disconnected', function (msg) {
-    let item = document.createElement('li');
-    item.textContent = msg;
-    messages.appendChild(item);
-    window.scrollTo(0, document.body.scrollHeight);
-});
-
-//Display a message when a new user is connected
-socket.on('user connected', function (msg) {
-    let item = document.createElement('li');
-    item.textContent = msg;
-    messages.appendChild(item);
-    window.scrollTo(0, document.body.scrollHeight);
-});
-
-//Refresh the user list
-socket.on('new username', function (msg) {
-    userList = msg;
-    usernames.innerHTML = "";
-    msg.forEach((element) => {
-        let item = document.createElement('li');
-        item.textContent = element;
-        usernames.appendChild(item);
+        currentConversationId = $(this).attr('id');
+        populateMessageList();
+        //TODO Show participants list
     });
-});
 
-//Reload the page with the parameters user=taken
-socket.on('username taken', function () {
-    window.location.href = "?user=taken";
-});
+    let inputUsername = $('#input-username');
 
-//Create the new conversation
-formConversation.addEventListener('submit', function (e) {
-    e.preventDefault();
-    let nameConversation = document.getElementById('nameConversation');
-    let userConversationList = [];
-    userConversationList.push(username);
+    $('#btn-login').click(function () {
+        // Hide past error
+        $('#txt-taken-username').hide();
 
-    userList.forEach((element) => {
-        if (element !== username) {
-            let checkedUser = document.getElementById(element);
-            if (checkedUser.checked) {
-                userConversationList.push(checkedUser.value);
+        // Get the input of username
+        username = inputUsername.val().trim();
+        let errorUsername = $('#txt-blank-username');
+        // Check if it's not blank
+        if (username === '') {
+            errorUsername.show();
+            return;
+        }
+
+        // Emit connect event to socket
+        socket.emit('connect-username', {user: username, id: socket.id});
+        errorUsername.hide();
+    });
+
+    inputUsername.keypress(function (ev) {
+        if (ev.keyCode === 13) {
+            $('#btn-login').click();
+        }
+    });
+
+    $('#btn-send').click(function () {
+        let inputMsg = $('#input-msg');
+        let content = inputMsg.val().trim();
+
+        if (content !== '') {
+            if (currentConversationId !== 'global') {
+                let conv = data.conversations[currentConversationId];
+                if (conv.messages.length === 0 && conv.participants.length === 2) {
+                    socket.emit('new-direct-message', {
+                        id: currentConversationId,
+                        participants: conv.participants,
+                        content: inputMsg.val()
+                    });
+                    return;
+                }
             }
+            socket.emit('chat-message', {
+                conversation: currentConversationId,
+                content: inputMsg.val()
+            });
+        }
+
+        inputMsg.val('');
+    });
+
+    $('#input-msg').keypress(function (ev) {
+        if (ev.keyCode === 13) {
+            $('#btn-send').click();
         }
     });
 
-    if (nameConversation.value) {
-        socket.emit('new conversation', {users: userConversationList, name: nameConversation.value});
-        nameConversation.value = "";
+    $('#btn-private-message').click(function () {
+        let notFoundError = $('#txt-user-not-found');
+        notFoundError.hide();
+        let recipient = $('#inputPMUsername').val();
+        if (users.includes(recipient) && recipient !== username) {
+            let participants = [recipient, username];
+            participants.sort();
+            let pmId = participants.join('-');
+            if (pmId in data.conversations) {
+                // Click on the conversation in the sidebar to load it
+                $('#' + pmId).click();
+            } else {
+                // Create the new conversation
+                data.conversations[pmId] = {
+                    participants: participants,
+                    messages: [],
+                    name: '__private_chat__'
+                }
+
+                populateChatsList();
+                $('#' + pmId).click();
+                let modal = bootstrap.Modal.getInstance(document.getElementById('privateMessageModal'));
+                modal.hide();
+            }
+        } else {
+            notFoundError.show();
+        }
+    });
+
+    $('#input-group-users').change(function () {
+        let selected = $('#input-group-users option:selected');
+        let list = $('#group-selected-user-list');
+
+        let badge = $('<span class="badge rounded-pill bg-primary me-2">' + selected.text() + ' <i class="bi bi-x"></i></span>');
+        badge.click(function () {
+            $('#input-group-users').append('<option>' + badge.text() + '</option>');
+            badge.remove();
+            if (list.children().length < 2) {
+                $('#btn-create-group').prop('disabled', true);
+            }
+        });
+        selected.remove();
+
+        list.append(badge);
+        if (list.children().length >= 2) {
+            $('#btn-create-group').prop('disabled', false);
+        }
+    });
+
+    $('#btn-create-group').click(function () {
+        let blankNameError = $('#txt-blank-group-name');
+        let inputGroupName = $('#input-group-name');
+
+        let groupName = inputGroupName.val().trim();
+        if (groupName === '') {
+            blankNameError.show();
+            return;
+        }
+        blankNameError.hide();
+
+        let participants = [ username ];
+        $('#group-selected-user-list').children().each(function () {
+            participants.push($(this).text().trim());
+        });
+
+        socket.emit('create-group', {
+            name: groupName,
+            participants: participants,
+        });
+
+        inputGroupName.val('');
+        bootstrap.Modal.getInstance(document.getElementById('newGroupModal')).hide();
+    });
+
+    let cookie = getCookie('username');
+    if (cookie) {
+        inputUsername.val(cookie);
     }
 });
 
-//Add the conversation to the list and display it
-socket.on('new conversation', function (msg) {
-    conversationList.push(msg);
-    let item = document.createElement('li');
-    let button = document.createElement('button');
-    button.textContent = msg.name;
-    button.onclick = function () {
-        showConversation(msg.name);
-    };
-    item.appendChild(button);
-    conversations.appendChild(item);
+socket.on('successful-login', function (received) {
+    data = received;
 
-    item = document.createElement('ul');
-    item.id = msg.name;
-    item.style.cssText = "display: none;";
-    let form = document.createElement('form');
-    form.id = "form";
-    form.action = "";
-    form.innerHTML = "" +
-        "<input id=\"input\" autoComplete=\"off\"/>\n" +
-        "                <button>Send</button>";
-    item.appendChild(form);
-    chat.appendChild(item);
+    // Store username in cookie
+    setCookie('username', username, '30');
+
+    // Build conversations list
+    populateChatsList();
+
+    populateMessageList();
+
+    // Show chat page
+    $('#login-page').hide();
+    $('#main-page').show();
 });
 
-function showConversation(name) {
-    conversationList.forEach((element) => {
-        let conv = document.getElementById(element.name);
-        conv.style.display = "none";
-    });
-    ulMessages.style.display = "none";
-    createConversation.style.display = "none";
-    let ul = document.getElementById(name);
-    ul.style.display = "";
+socket.on('username-already-taken', function () {
+    $('#txt-taken-username').show();
+});
+
+socket.on('user-list', function (data) {
+    users = data;
+    let userList = $('#user-list');
+    let pmUserList = $('#usernameOptions');
+    let groupUserList = $('#input-group-users');
+    userList.empty();
+    pmUserList.empty();
+    groupUserList.empty();
+    groupUserList.append('<option selected>Select user</option>');
+
+    data.sort();
+
+    for (const user of data) {
+        let clone = $('#models .user-item').clone();
+        clone.find('.username').text(user);
+        if (user === username) {
+            clone.find('a').show();
+        } else {
+            let option = $('<option>')
+            option.attr('value', user);
+            pmUserList.append(option);
+            groupUserList.append($('<option>' + user + '</option>'));
+        }
+        userList.append(clone);
+    }
+});
+
+socket.on('message', function (received) {
+    let {conversationId, message} = received;
+
+    if (conversationId === 'global') {
+        data.globalMessages.push(message);
+    } else {
+        data.conversations[conversationId]['messages'].push(message);
+    }
+
+    if (conversationId === currentConversationId) {
+        $('.messages-list').prepend(buildMessage(message));
+    } else {
+        //TODO New message indicator
+        $('#' + conversationId).addClass('new-message');
+    }
+});
+
+socket.on('new-conversation', function (received) {
+    let {conversationId, conversation} = received;
+    data.conversations[conversationId] = conversation;
+    populateChatsList();
+    populateMessageList();
+    if (currentConversationId !== conversationId) {
+        $('#' + conversationId).addClass('new-message');
+    }
+});
+
+function logout() {
+    eraseCookie('username');
+    location.reload();
 }
 
-function newConversation() {
-    formConversation.innerHTML = "";
-    ulMessages.style.display = "none";
-    conversationList.forEach((element) => {
-        let conv = document.getElementById(element.name);
-        conv.style.display = "none";
-    });
-    createConversation.style.display = "";
-    let br = document.createElement('br');
+function populateChatsList() {
+    let convList = $('#chat-list');
+    convList.empty();
 
-    userList.forEach((element) => {
-        if (element !== username) {
-            let input = document.createElement('input');
-            input.type = "checkbox";
-            input.id = element;
-            input.name = element;
-            input.value = element;
-            input.textContent = element;
-            createConversation.appendChild(input);
-            formConversation.appendChild(input);
-
-            let label = document.createElement('label');
-            label.htmlFor = element;
-            label.textContent = element;
-            formConversation.appendChild(label);
-            let br = document.createElement('br');
-            formConversation.appendChild(br);
+    //TODO Sort by last message timestamp & display content
+    Object.keys(data.conversations).forEach(convId => {
+        let conv = data.conversations[convId];
+        let el = $('<div class="conversation-item"></div>');
+        el.attr('id', convId);
+        if (convId === currentConversationId) {
+            el.addClass('active');
         }
+        let name = conv.name;
+        if (name === '__private_chat__') {
+            // If this is a private chat between 2 persons, use the other person name as a conversation name
+            name = conv.participants.filter(user => user !== username)[0];
+        }
+        el.text(name);
+        convList.append(el);
+    })
+}
+
+function populateMessageList() {
+    $('#current-conv-title').text(currentConversationId === 'global' ? 'Global room' : $('#' + currentConversationId).text());
+
+    let msgList = $('.messages-list');
+    msgList.empty();
+    let messages = currentConversationId === 'global' ? data.globalMessages : data.conversations[currentConversationId].messages;
+    messages.sort((a, b) => a.timestamp < b.timestamp ? 1 : -1);
+    messages.forEach(msg => {
+        msgList.append(buildMessage(msg));
     });
+}
 
-    let label = document.createElement('p');
-    label.textContent = "Name of the conversation : ";
-    label.style.margin = '0';
-    formConversation.appendChild(label);
-    let input = document.createElement('input');
-    input.id = "nameConversation";
-    formConversation.appendChild(input);
-    formConversation.appendChild(br);
+function buildMessage(message) {
+    let clone = $('#models .msg').clone();
+    clone.find('.msg-sender').text(message.sender);
+    clone.find('.msg-content').text(message.content);
+    clone.find('.msg-timestamp').text(formatTimestamp(message.timestamp));
 
-    let button = document.createElement('button');
-    button.textContent = "Create";
-    formConversation.appendChild(button);
+    let css = message.sender === username ? 'msg-sent' : 'msg-received';
+    clone.addClass(css);
+    return clone;
+}
+
+function formatTimestamp(timestamp) {
+    let date = new Date();
+    date.setTime(timestamp);
+
+    return leadingZero(date.getDay()) + '/' + leadingZero(date.getMonth()) + '/' + date.getFullYear() + ' - ' + date.getHours() + ':' + leadingZero(date.getMinutes());
+}
+
+function leadingZero(number) {
+    return number < 10 ? '0' + number : number;
+}
+
+function setCookie(name, value, days) {
+    let expires = "";
+    if (days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "") + expires + "; path=/";
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
+function eraseCookie(name) {
+    document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
 }

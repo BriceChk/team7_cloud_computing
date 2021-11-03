@@ -7,11 +7,23 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node app.js"
   },
+  "contributors": [
+    {
+      "name": "Mickaël BENASSE (805211)"
+    },
+    {
+      "name": "Brice CHKIR (805212)"
+    },
+    {
+      "name": "Joffrey COLLET (805213)"
+    }
+  ],
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "express": "^4.17.1",
-    "socket.io": "^4.3.1"
+    "socket.io": "^4.3.1",
+    "uuid": "^8.3.2"
   }
 }
