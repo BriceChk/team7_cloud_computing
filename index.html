@@ -71,6 +71,7 @@ AUTHORS: GROUP 7 - Mickaël BENASSE (805211), Brice CHKIR (805212), Joffrey COLL
                 <hr class="mt-0">
                 <div class="input-group">
                     <input id="input-msg" type="text" class="form-control" aria-label="Chat input" placeholder="Enter a message...">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#sendFileModal"><i class="bi bi-paperclip"></i></button>
                     <button id="btn-send" type="button" class="btn btn-outline-secondary">Send</button>
                 </div>
             </div>
@@ -83,14 +84,7 @@ AUTHORS: GROUP 7 - Mickaël BENASSE (805211), Brice CHKIR (805212), Joffrey COLL
             </div>
 
             <div id="user-list" class="pt-3">
-                <div class="user-item">
-                    <i class="bi bi-person-fill"></i>
-                    <span class="username ps-2">John Doe</span>
-                </div>
-                <div class="user-item">
-                    <i class="bi bi-person-fill"></i>
-                    <span class="username ps-2">John Due</span>
-                </div>
+
             </div>
         </div>
     </div>
@@ -168,7 +162,26 @@ AUTHORS: GROUP 7 - Mickaël BENASSE (805211), Brice CHKIR (805212), Joffrey COLL
     </div>
 </div>
 
+<!-- Send file Modal -->
+<div class="modal fade" id="sendFileModal" tabindex="-1" aria-labelledby="sendFileModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sendFileModalLabel">Send file</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="siofu_input" class="form-label">Choose file</label>
+                    <input class="form-control" type="file" id="siofu_input">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.socket.io/4.3.2/socket.io.min.js" integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/socketio-file-upload@0.7.3/client.min.js"></script>
 <script crossorigin="anonymous" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk="
         src="https://code.jquery.com/jquery-3.6.0.js"></script>
 <script crossorigin="anonymous"

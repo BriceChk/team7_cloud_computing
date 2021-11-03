@@ -1,6 +1,9 @@
 // AUTHORS: GROUP 7 - Mickaël BENASSE (805211), Brice CHKIR (805212), Joffrey COLLET (805213)
 
 let socket = io();
+const uploader = new SocketIOFileUpload(socket);
+uploader.listenOnInput(document.getElementById("siofu_input"));
+
 let username = '';
 let data = {
     globalMessages: [],

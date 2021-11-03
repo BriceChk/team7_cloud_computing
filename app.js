@@ -1,12 +1,15 @@
 // AUTHORS: GROUP 7 - Mickaël BENASSE (805211), Brice CHKIR (805212), Joffrey COLLET (805213)
 
 const express = require('express');
-const app = express();
 const http = require('http');
-const server = http.createServer(app);
 const {Server} = require("socket.io");
-const io = new Server(server);
 const { v4: uuidv4 } = require('uuid');
+const SocketIOFileUpload = require("socketio-file-upload");
+
+const app = express().use(SocketIOFileUpload.router);
+const server = http.createServer(app);
+const io = new Server(server);
+
 
 // Database
 let data = {
@@ -30,6 +33,17 @@ app.get('/client.js', (req, res) => {
 
 // Handle socket connections
 io.on('connection', (socket) => {
+    const uploader = new SocketIOFileUpload();
+    uploader.dir = __dirname + "/uploads";
+    uploader.listen(socket);
+
+    uploader.on('saved', function (event) {
+        if (event.file.success) {
+            let parts = event.file.pathName.replace(/\\/g, '/').split('/');
+            console.log('uploads/' + parts[parts.length - 1]);
+        }
+    });
+
     // Called when a new user enter the room
     socket.on('connect-username', function (msg) {
         // Get the parameters
