@@ -39,7 +39,7 @@ $(document).ready(() => {
         $('#txt-taken-username').hide();
 
         // Get the input of username
-        username = inputUsername.val().trim();
+        username = inputUsername.val().trim().replace(/ /g, '-');
         let errorUsername = $('#txt-blank-username');
         // Check if it's not blank
         if (username === '') {
