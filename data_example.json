@@ -15,11 +15,9 @@
       "timestamp": 123123123123
     }
   ],
-  "globalUploads": [
-
-  ],
+  "globalUploads": [],
   "conversations": {
-    "convID1234": {
+    "conv-UUID": {
       "name": "Lorem ipsum",
       "participants": [
         "username1",
@@ -28,7 +26,7 @@
       ],
       "messages": [
         {
-          "sender": "<username>",
+          "sender": "username1",
           "content": "Lorem ipsum",
           "timestamp": 123123123123
         }
