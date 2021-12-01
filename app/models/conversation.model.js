@@ -1,13 +1,9 @@
 const mongoose = require("mongoose");
-const utils = require("../../app/middlewares/utils");
 
 const Conversation = mongoose.model(
     "Conversation",
     new mongoose.Schema({
-        name: {
-            type: String,
-            set: v => utils.sanitize(v)
-        },
+        name: String,
         participants: [
             {
                 type: mongoose.Types.ObjectId,
@@ -21,21 +17,16 @@ const Conversation = mongoose.model(
                     ref: "User"
                 },
                 senderName: String,
-                content: {
-                    type: String,
-                    set: v => utils.sanitize(v)
-                },
+                content: String,
                 timestamp: { type: Date, default: Date.now },
                 isSpecial: {
                     type: Boolean,
                     default: false
+                },
+                isUpload: {
+                    type: Boolean,
+                    default: false
                 }
-            }
-        ],
-        files: [
-            {
-                name: String,
-                url: String
             }
         ],
         isGlobal: {

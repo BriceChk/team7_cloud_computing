@@ -5,6 +5,10 @@ const User = mongoose.model(
     new mongoose.Schema({
         username: String,
         password: String,
+        imageUrl: {
+            type: String,
+            default: '/placeholder.png'
+        }
     })
 );
 

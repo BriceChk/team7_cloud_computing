@@ -75,21 +75,21 @@ io.on('connection', (socket) => {
     uploader.dir = __dirname + "/public/uploads";
     uploader.listen(socket);
 
+    let pendingUploads = [];
+
     uploader.on('saved', function (event) {
         if (event.file.success) {
             let parts = event.file.pathName.replace(/\\/g, '/').split('/');
             let fileLink = '/uploads/' + parts[parts.length - 1];
             console.log('finish upload');
-            Object.keys(data.conversations).forEach(convId => {
-                let conv = data.conversations[convId];
-                if (conv.uploads && conv.uploads.includes(event.file.name)) {
-                    sendMessage(convId, 'I attached a file: http://' + hostname + fileLink, socket);
-                    conv.uploads.splice(conv.uploads.indexOf(event.file.name), 1);
+
+            for (let i = 0; i < pendingUploads.length; i++) {
+                let pUp = pendingUploads[i];
+                if (pUp.fileName === event.file.name) {
+                    sendMessage(pUp.convId, fileLink, socket, false, true);
+                    pendingUploads.splice(pendingUploads.indexOf(pUp), 1);
+                    break;
                 }
-            });
-            if (data.globalUploads.includes(event.file.name)) {
-                sendMessage('global', 'I attached a file: http://' + hostname + fileLink, socket);
-                data.globalUploads.splice(data.globalUploads.indexOf(event.file.name), 1);
             }
         }
     });
@@ -139,7 +139,7 @@ io.on('connection', (socket) => {
         // Join socket.io rooms (not the global one)
         for (let i = 0; i < convos.length; i++) {
             if (convos[i].isGlobal) continue;
-            socket.join(convos[i]._id);
+            socket.join(convos[i]._id.toString());
         }
 
         emitUserList();
@@ -183,56 +183,67 @@ io.on('connection', (socket) => {
 
     // Function to create a new private conversation
     socket.on('new-direct-message', async (received) => {
-        let {participants, content} = received;
+        let {participants} = received;
 
         // Build the message
         let message = {
             sender: socket.userId,
-            content: content,
+            senderName: socket.username,
+            content: 'created',
+            isSpecial: true
         }
 
-        //TODO Check if a private convo already exists?
+        //TODO Check if a private convo already exists? Already done client-side but to make sure?
 
         // Add the new conversation to the DB
         let conv = new Conversation({
             participants: participants,
             name: '__private_chat__',
-            message: [message]
+            messages: [message]
         });
 
         conv.save((error, result) => {
-            if (error) return console.log(error);
-            //TODO Emit general error msg?
+            if (error) {
+                socket.emit('error', { message: 'Could not create private conversation' });
+                return;
+            }
 
             // Subscribe the users to the room
             participants.forEach(userId => {
                 if (userId in onlineUsers) {
                     let socketIds = onlineUsers[userId].sockets;
                     socketIds.forEach(socketId => {
-                        io.sockets.sockets.get(socketId).join(result._id);
+                        io.sockets.sockets.get(socketId).join(result._id.toString());
                     });
                 }
             });
 
             // Cast the conversation to the group
-            io.to(result._id).emit('new-conversation', {
+            io.to(result._id.toString()).emit('new-conversation', {
                 conversation: result
             });
         });
     });
 
     socket.on('create-group', async (received) => {
-        console.log("new group!");
-
         // Keep only existing users
-        let participants = received.participants.filter(async function (value, index, self) {
+        let participants = received.participants.filter(async function (value) {
             return await User.exists({_id: value});
         })
+
+        // Build the message
+        let message = {
+            sender: socket.userId,
+            senderName: socket.username,
+            content: 'created',
+            isSpecial: true
+        }
 
         // Save convo in db
         let conv = new Conversation({
             participants: received.participants,
-            name: received.name
+            name: received.name,
+            messages: [message]
         });
         let dbConv = await conv.save();
 
@@ -241,35 +252,36 @@ io.on('connection', (socket) => {
             if (userId in onlineUsers) {
                 let socketIds = onlineUsers[userId].sockets;
                 socketIds.forEach(socketId => {
-                    io.sockets.sockets.get(socketId).join(dbConv._id);
+                    io.sockets.sockets.get(socketId).join(dbConv._id.toString());
                 });
             }
         });
 
         // Cast the new group to the participants
-        io.to(id).emit('new-conversation', {
+        io.to(dbConv._id.toString()).emit('new-conversation', {
             conversation: dbConv
         });
     });
 
-    //TODO Manage uploads with database
-    socket.on('start-upload', (received) => {
-        let { conversationId, fileName } = received;
+    socket.on('start-upload', async (received) => {
+        let {conversationId, fileName} = received;
         console.log('start upload ' + fileName);
-        if (conversationId === 'global') {
-            data.globalUploads.push(fileName);
-        } else {
-            let conv = data.conversations[conversationId];
-            if (conv.uploads) {
-                conv.uploads.push(fileName);
-            } else {
-                conv.uploads = [ fileName ];
-            }
+
+        let conv = await Conversation.findById(conversationId);
+
+        if (!conv) {
+            socket.emit('error', {message: 'Invalid conversation'});
+            return;
         }
+
+        pendingUploads.push({
+            convId: conv._id.toString(),
+            fileName: fileName
+        });
     });
 });
 
-async function sendMessage(convId, content, socket, specialMessage) {
+async function sendMessage(convId, content, socket, specialMessage, isUpload) {
     let conv = await Conversation.findById(convId);
 
     if (!conv) {
@@ -288,7 +300,8 @@ async function sendMessage(convId, content, socket, specialMessage) {
         senderName: socket.username,
         content: content,
         timestamp: Date.now(),
-        isSpecial: specialMessage
+        isSpecial: specialMessage,
+        isUpload: isUpload
     };
 
     conv.messages.push(message);
@@ -305,7 +318,7 @@ async function sendMessage(convId, content, socket, specialMessage) {
     if (convId.toString() === globalConvId.toString()) {
         io.emit('message', response)
     } else {
-        io.to(convId).emit('message', response);
+        io.to(convId.toString()).emit('message', response);
     }
 }
 

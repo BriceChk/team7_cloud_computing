@@ -6,6 +6,19 @@ let currentConversationId = 'global';
 let conversations = [];
 let onlineUsers = [];
 
+const uploader = new SocketIOFileUpload(socket);
+uploader.listenOnInput(document.getElementById("siofu_input"));
+uploader.addEventListener('start', function (event) {
+    socket.emit('start-upload', {
+        conversationId: currentConversationId,
+        fileName: event.file.name
+    });
+});
+
+uploader.addEventListener('complete', function (event) {
+    bootstrap.Modal.getInstance(document.getElementById('sendFileModal')).hide();
+});
+
 $(document).ready(() => {
 
     // ====== LOGIN ======
@@ -105,21 +118,21 @@ $(document).ready(() => {
             let participants = [recipient._id, user._id];
             participants.sort();
 
-            let privateConv = getPrivateConvWith(recipient);
+            let privateConv = getPrivateConvWith(recipient._id);
+            console.log(privateConv);
 
             if (privateConv) {
                 // Click on the conversation in the sidebar to load it
-                $('#' + privateConv._id).click();
+                $('#' + privateConv._id.toString()).click();
             } else {
                 // Create the new conversation by sending a first message in it
                 socket.emit('new-direct-message', {
                     participants: participants,
-                    content: 'I created a new private conversation'
                 });
-
-                let modal = bootstrap.Modal.getInstance(document.getElementById('privateMessageModal'));
-                modal.hide();
             }
+
+            let modal = bootstrap.Modal.getInstance(document.getElementById('privateMessageModal'));
+            modal.hide();
         } else {
             notFoundError.show();
         }
@@ -129,9 +142,9 @@ $(document).ready(() => {
         let selected = $('#input-group-users option:selected');
         let list = $('#group-selected-user-list');
 
-        let badge = $('<span class="badge rounded-pill bg-primary me-2">' + selected.text() + ' <i class="bi bi-x"></i></span>');
+        let badge = $('<span class="badge rounded-pill bg-primary me-2" data-id="' + selected.attr('data-id') + '">' + selected.text() + ' <i class="bi bi-x"></i></span>');
         badge.click(function () {
-            $('#input-group-users').append('<option>' + badge.text() + '</option>');
+            $('#input-group-users').append('<option data-id="' + badge.attr('data-id') + '">' + badge.text() + '</option>');
             badge.remove();
             if (list.children().length < 2) {
                 $('#btn-create-group').prop('disabled', true);
@@ -156,9 +169,9 @@ $(document).ready(() => {
         }
         blankNameError.hide();
 
-        let participants = [username];
+        let participants = [user._id];
         $('#group-selected-user-list').children().each(function () {
-            participants.push($(this).text().trim());
+            participants.push($(this).attr('data-id'));
         });
 
         socket.emit('create-group', {
@@ -167,6 +180,8 @@ $(document).ready(() => {
         });
 
         inputGroupName.val('');
+        let modal = bootstrap.Modal.getInstance(document.getElementById('newGroupModal'));
+        modal.hide();
     });
 });
 
@@ -266,7 +281,7 @@ socket.on('user-list', function (data) {
             option.attr('value', u.username);
             option.attr('data-id', u._id);
             pmUserList.append(option);
-            groupUserList.append($('<option>' + u.username + '</option>'));
+            groupUserList.append($('<option data-id="' + u._id + '">' + u.username + '</option>'));
         }
         userList.append(clone);
     }
@@ -300,6 +315,21 @@ socket.on('error', function (received) {
     console.log(received.message);
 });
 
+socket.io.on("disconnect", () => {
+    toast('Disconnected', "You're disconnected from the server", 'danger');
+});
+
+socket.io.on("reconnect_attempt", () => {
+    toast('Disconnected', 'Trying to reconnect...', 'danger');
+});
+
+socket.io.on("reconnect", () => {
+    let jwt = localStorage.getItem("accessToken");
+    if (jwt !== null) {
+        socket.emit('connect-jwt', {jwt: jwt, id: socket.id});
+    }
+});
+
 function getConvById(id) {
     return conversations.find(value => value._id === id);
 }
@@ -313,7 +343,7 @@ function getGlobalConv() {
 }
 
 function getPrivateConvWith(uId) {
-    return conversations.find(value => value.participants.includes(uId) && value.participants.length === 2);
+    return conversations.find(value => value.participants.includes(uId.toString()) && value.participants.length === 2 && !value.isGlobal);
 }
 
 function getUserByUsername(uname) {
@@ -346,21 +376,24 @@ function populateChatsList() {
 
     //TODO Sort by last message timestamp & display content
     conversations.forEach(conv => {
-        let el = $('<div class="conversation-item"></div>');
-        el.attr('id', conv._id);
-        if (conv._id === currentConversationId) {
-            el.addClass('active');
-        }
-        let name = conv.name;
-        if (name === '__private_chat__') {
-            // If this is a private chat between 2 persons, use the other person name as a conversation name
-            name = getUserById(conv.participants.filter(uId => uId !== user._id)[0]).username;
-        }
-        el.text(name);
-        convList.append(el);
-
-        if (currentConversationId === 'global' && conv.isGlobal) {
-            currentConversationId = conv._id;
+        if (conv.isGlobal) {
+            $('#global').attr('id', conv._id.toString());
+            if (currentConversationId === 'global') {
+                currentConversationId = conv._id.toString();
+            }
+        } else {
+            let el = $('<div class="conversation-item"></div>');
+            el.attr('id', conv._id.toString());
+            if (conv._id === currentConversationId) {
+                el.addClass('active');
+            }
+            let name = conv.name;
+            if (name === '__private_chat__') {
+                // If this is a private chat between 2 persons, use the other person name as a conversation name
+                name = getUserById(conv.participants.filter(uId => uId !== user._id)[0]).username;
+            }
+            el.text(name);
+            convList.append(el);
         }
     })
 }
@@ -403,8 +436,15 @@ function buildMessage(message) {
 
     let clone = $('#models .msg').clone();
     clone.find('.msg-sender').text(message.senderName);
-    clone.find('.msg-content').text(message.content);
     clone.find('.msg-timestamp').text(formatTimestamp(message.timestamp));
+    if (message.isUpload) {
+        //TODO Make a better preview of files
+        let parts = message.content.split('/');
+        let fileName = parts[parts.length - 1];
+        clone.find('.msg-content').html('<a target="_blank" href="' + message.content + '">' + fileName + '</a>');
+    } else {
+        clone.find('.msg-content').text(message.content);
+    }
 
     let css = message.sender === user._id ? 'msg-sent' : 'msg-received';
     clone.addClass(css);
