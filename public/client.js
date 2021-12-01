@@ -185,10 +185,6 @@ socket.on('successful-login', function (received) {
     $('#main-page').show();
 });
 
-socket.on('username-already-taken', function () {
-    $('#txt-taken-username').show();
-});
-
 socket.on('user-list', function (data) {
     users = data;
     let userList = $('#user-list');
@@ -242,11 +238,6 @@ socket.on('new-conversation', function (received) {
         $('#' + conversationId).addClass('new-message');
     }
 });
-
-function logout() {
-    eraseCookie('username');
-    location.reload();
-}
 
 function populateChatsList() {
     let convList = $('#chat-list');
@@ -311,40 +302,4 @@ function buildMessage(message) {
     let css = message.sender === username ? 'msg-sent' : 'msg-received';
     clone.addClass(css);
     return clone;
-}
-
-function formatTimestamp(timestamp) {
-    let date = new Date();
-    date.setTime(timestamp);
-
-    return leadingZero(date.getDay()) + '/' + leadingZero(date.getMonth()) + '/' + date.getFullYear() + ' - ' + date.getHours() + ':' + leadingZero(date.getMinutes());
-}
-
-function leadingZero(number) {
-    return number < 10 ? '0' + number : number;
-}
-
-function setCookie(name, value, days) {
-    let expires = "";
-    if (days) {
-        const date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-        expires = "; expires=" + date.toUTCString();
-    }
-    document.cookie = name + "=" + (value || "") + expires + "; path=/";
-}
-
-function getCookie(name) {
-    const nameEQ = name + "=";
-    const ca = document.cookie.split(';');
-    for (let i = 0; i < ca.length; i++) {
-        let c = ca[i];
-        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-    }
-    return null;
-}
-
-function eraseCookie(name) {
-    document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
 }

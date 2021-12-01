@@ -13,5 +13,9 @@
     <orderEntry type="library" name="bootstrap-icons" level="application" />
     <orderEntry type="library" name="socket.io" level="application" />
     <orderEntry type="library" name="socketio-file-upload" level="application" />
+    <orderEntry type="library" name="jquery" level="application" />
+    <orderEntry type="library" name="socketio-file-upload" level="application" />
+    <orderEntry type="library" name="socket.io" level="application" />
+    <orderEntry type="library" name="bootstrap" level="application" />
   </component>
 </module>

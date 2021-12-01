@@ -25,13 +25,32 @@ AUTHORS: GROUP 7 - Mickaël BENASSE (805211), Brice CHKIR (805212), Joffrey COLL
             <div>
                 <h1>Group 7 Chat</h1>
                 <p><i>by Mickaël BENASSE, Brice CHKIR & Joffrey COLLET</i></p>
-                <p>Enter a username:</p>
-                <div class="input-group mx-auto" style="width: 300px">
-                    <input id="input-username" type="text" class="form-control" aria-label="Username input" placeholder="Enter a username..." autofocus>
-                    <button type="button" class="btn btn-primary" id="btn-login">Login</button>
+
+                <div class="row">
+                    <div class="col">
+                        <h3>Login</h3>
+                        <div class="input-group mx-auto mb-2" style="width: 300px">
+                            <input id="input-username" type="text" class="form-control" aria-label="Username input" placeholder="Enter your username..." autofocus>
+                        </div>
+                        <div class="input-group mx-auto" style="width: 300px">
+                            <input id="input-password" type="password" class="form-control" aria-label="Password input" placeholder="Enter your password..." autofocus>
+                            <button type="button" class="btn btn-primary" id="btn-login">Login</button>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <h3>Signup</h3>
+                        <img src="placeholder.png" class="img-thumbnail rounded mb-2" style="width: 100px" alt="Profile pic preview" id="profile-pic-preview">
+                        <div class="input-group mx-auto mb-2" style="width: 300px">
+                            <input id="input-username-signup" type="text" class="form-control" aria-label="Username input" placeholder="Enter a username..." autofocus>
+                        </div>
+                        <div class="input-group mx-auto" style="width: 300px">
+                            <input id="input-password-signup" type="password" class="form-control" aria-label="Password input" placeholder="Enter a password..." autofocus>
+                            <button type="button" class="btn btn-primary" id="btn-signup">Sign up</button>
+                            <small id="nomHelp" class="form-text text-muted">8 characters, symbol, number, lower and upper case letters</small>
+                        </div>
+                        <input id="profilePicInput" type="file" accept="image/gif, image/jpeg, image/png" hidden  />
+                    </div>
                 </div>
-                <p id="txt-blank-username" class="text-danger" style="display: none">Username cannot be blank</p>
-                <p id="txt-taken-username" class="text-danger" style="display: none">Username already taken</p>
             </div>
         </div>
     </div>
@@ -190,13 +209,27 @@ AUTHORS: GROUP 7 - Mickaël BENASSE (805211), Brice CHKIR (805212), Joffrey COLL
     </div>
 </div>
 
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div class="toast align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true" id="liveToast">
+        <div class="d-flex">
+            <div id="toast-title" class="toast-body fw-bold"></div>
+            <div class="toast-body">
+                Hello, world! This is a toast message.
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.socket.io/4.3.2/socket.io.min.js" integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/socketio-file-upload@0.7.3/client.min.js"></script>
-<script crossorigin="anonymous" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk="
-        src="https://code.jquery.com/jquery-3.6.0.js"></script>
+<script crossorigin="anonymous"
+        src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script crossorigin="anonymous"
         integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
         src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="client.js"></script>
+<script src="client-2.js"></script>
+<script src="utils.js"></script>
 </body>
 </html>

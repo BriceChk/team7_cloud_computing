@@ -2,21 +2,26 @@ version: "1.0"
 services:
   chat-server:
     build: .
-    container_name: chatapp
+    container_name: chatserver
     ports:
       - 80:3000
     networks:
       - chatnetwork
+    hostname: chatserver
+    volumes:
+      - chatfiles:/usr/src/app/public/uploads
   userdb:
     image: mongo:latest
-    container_name: chatdb
+    container_name: userdb
     volumes:
       - userdb:/data/db
     networks:
       - chatnetwork
+    hostname: userdb
 
 volumes:
   userdb:
+  chatfiles:
 
 networks:
   chatnetwork:

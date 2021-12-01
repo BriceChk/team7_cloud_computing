@@ -3,22 +3,63 @@
 const express = require('express');
 const http = require('http');
 const {Server} = require("socket.io");
-const { v4: uuidv4 } = require('uuid');
 const SocketIOFileUpload = require("socketio-file-upload");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const db = require("./app/models");
+const dbConfig = require("./app/config/db.config");
+const authJwt = require('./app/middlewares/authJwt');
+const utils = require("./app/middlewares/utils");
 
 const app = express().use(SocketIOFileUpload.router);
 const server = http.createServer(app);
 const io = new Server(server);
 
-let hostname = '';
+const User = db.user;
+const Conversation = db.conversation;
 
-// Database
-let data = {
-    users: {},
-    globalMessages: [],
-    globalUploads: [],
-    conversations: {}
+let corsOptions = {
+    origin: "http://localhost:3001"
 };
+
+app.use(cors(corsOptions));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+let hostname = '';
+let globalConvId = '';
+
+db.mongoose
+    .connect(`mongodb://${dbConfig.HOST}:${dbConfig.PORT}/${dbConfig.DB}`)
+    .then(() => {
+        console.log("Successfully connect to MongoDB.");
+
+        // Create default Global conversation if it doesn't exist
+        Conversation.findOne({ isGlobal: true }, (err, conv) => {
+            if (!conv) {
+                new Conversation({
+                    name: 'Global room',
+                    isGlobal: true
+                }).save((error, result) => {
+                    globalConvId = result._id;
+                });
+                console.log("Created Global conversation.");
+            } else {
+                globalConvId = conv._id;
+            }
+        });
+    })
+    .catch(err => {
+        console.error("Connection error", err);
+        process.exit();
+    });
+
+// Init API routes
+require('./app/routes/auth.routes')(app);
+require('./app/routes/chat.routes')(app);
+
+// List connected users
+let onlineUsers = {};
 
 // Serve client files
 app.get('/', (req, res) => {
@@ -54,136 +95,164 @@ io.on('connection', (socket) => {
     });
 
     // Called when a new user enter the room
-    socket.on('connect-username', function (msg) {
+    socket.on('connect-jwt', async function (msg) {
+        console.log("connect-jwt event");
         // Get the parameters
-        let username = msg.user;
-        let id = msg.id;
+        let jwt = msg.jwt;
 
-        if (username in data.users && data.users[username].online) {
-            //If the username is taken, tell the client
-            io.to(id).emit('username-already-taken');
-        } else {
-            // If the username is not taken
-            // Assign the username to the socket
-            socket.username = username;
+        let userId = authJwt.getUserIdOfToken(jwt);
 
-            // Update or push the username in the users list
-            if (username in data.users) {
-                data.users[username].online = true;
-                data.users[username].socketId = id;
-                console.log("User " + username + " has logged back in");
-            } else {
-                data.users[username] = {
-                    conversations: [],
-                    online: true,
-                    socketId: id
-                }
-                console.log("New user " + username + " has logged in");
-            }
-
-            // Add the socket to the conversation rooms
-            Object.keys(data.users[username].conversations).forEach(convId => socket.join(convId));
-
-            let conversations = {};
-            data.users[username].conversations.forEach(c => {
-                conversations[c] = data.conversations[c];
-            })
-
-            // Send the current global room messages & private conversations to the user
-            io.to(id).emit('successful-login', {
-                globalMessages: data.globalMessages,
-                conversations: conversations
+        // JWT is invalid
+        if (userId == null) {
+            socket.emit('error', {
+                message: 'Invalid JWT!'
             });
+            return;
+        }
 
-            // Tell everyone a new user has connected
-            //TODO io.emit('user-connected', socket.username + " has joined the chat!");
-            sendMessage('global', 'joined', socket, true);
-            emitUserList();
+        let user = await User.findById(userId);
+
+        // User doesn't exist
+        if (!user) {
+            socket.emit('error', {
+                message: 'User not found!'
+            });
+            return;
+        }
+
+        // User has no current connection
+        if (!(userId in onlineUsers)) {
+            onlineUsers[userId] = {
+                sockets: [],
+                username: user.username
+            }
+        }
+
+        // Add new socket ID
+        socket.userId = userId;
+        socket.username = user.username;
+        onlineUsers[userId].sockets.push(socket.id);
+
+        // Get all conversations where the user is a participant
+        let convos = await Conversation.find({ participants: user });
+
+        // Join socket.io rooms (not the global one)
+        for (let i = 0; i < convos.length; i++) {
+            if (convos[i].isGlobal) continue;
+            socket.join(convos[i]._id);
+        }
+
+        emitUserList();
+
+        // Send conversations to the user
+        socket.emit('successful-login', {
+            conversations: convos,
+            user: {
+                _id: userId,
+                username: user.username
+            }
+        });
+
+        // If it's the only open socket for this user, broadcast the join message
+        if (onlineUsers[userId].sockets.length === 1) {
+            await sendMessage(globalConvId, 'joined', socket, true);
         }
     });
 
-    // When a user disconnect
-    socket.on('disconnect', () => {
-        // Verify that he has a username
-        if (socket.username !== undefined) {
-            data.users[socket.username].online = false;
-            console.log('User ' + socket.username + ' has disconnected');
-            sendMessage('global', 'left', socket, true);
-            emitUserList();
+    // When a user disconnects
+    socket.on('disconnect', async () => {
+        // Verify that he has a user id
+        if (socket.userId !== undefined) {
+            utils.removeItemOnce(onlineUsers[socket.userId].sockets, socket.id);
+
+            // If it's his last open socket, broadcast left message
+            if (onlineUsers[socket.userId].sockets.length === 0) {
+                delete onlineUsers[socket.userId];
+                await sendMessage(globalConvId, 'left', socket, true);
+                console.log('User ' + socket.username + ' has disconnected');
+                emitUserList();
+            }
         }
     });
 
     // Function to send a message in the chat with the username
     socket.on('chat-message', (received) => {
-        let { content, conversation } = received;
-        sendMessage(conversation, content, socket
-        );
+        let {content, conversation} = received;
+        sendMessage(conversation, content, socket);
     });
 
     // Function to create a new private conversation
-    socket.on('new-direct-message', (received) => {
-        let { id, participants, content } = received;
-        let timestamp = new Date().getTime();
+    socket.on('new-direct-message', async (received) => {
+        let {participants, content} = received;
 
         // Build the message
         let message = {
-            sender: socket.username,
+            sender: socket.userId,
             content: content,
-            timestamp: timestamp
         }
+
+        //TODO Check if a private convo already exists?
 
         // Add the new conversation to the DB
-        data.conversations[id] = {
+        let conv = new Conversation({
             participants: participants,
             name: '__private_chat__',
-            messages: [ message ]
-        }
-
-        // Subscribe the users to the room
-        participants.forEach(userId => {
-            io.sockets.sockets.get(data.users[userId].socketId).join(id);
-            data.users[userId].conversations.push(id);
+            message: [message]
         });
 
-        // Cast the conversation to the group
-        io.to(id).emit('new-conversation', {
-            conversation: data.conversations[id],
-            conversationId: id
+        conv.save((error, result) => {
+            if (error) return console.log(error);
+            //TODO Emit general error msg?
+
+            // Subscribe the users to the room
+            participants.forEach(userId => {
+                if (userId in onlineUsers) {
+                    let socketIds = onlineUsers[userId].sockets;
+                    socketIds.forEach(socketId => {
+                        io.sockets.sockets.get(socketId).join(result._id);
+                    });
+                }
+            });
+
+            // Cast the conversation to the group
+            io.to(result._id).emit('new-conversation', {
+                conversation: result
+            });
         });
     });
 
-    socket.on('create-group', (received) => {
+    socket.on('create-group', async (received) => {
         console.log("new group!");
-        let group = received;
-        group.messages = [];
-        let id = uuidv4();
 
-        // Should never happen but we never know
-        while (id in data.conversations) {
-            id = uuidv4();
-        }
+        // Keep only existing users
+        let participants = received.participants.filter(async function (value, index, self) {
+            return await User.exists({_id: value});
+        })
 
-        // Filter non-existant users & duplicates
-        group.participants = group.participants.filter(function (value, index, self) {
-            return value in data.users;
+        // Save convo in db
+        let conv = new Conversation({
+            participants: received.participants,
+            name: received.name
         });
+        let dbConv = await conv.save();
 
-        // Add the conversation to the participants & add them to the room
-        group.participants.forEach(p => {
-            data.users[p].conversations.push(id);
-            io.sockets.sockets.get(data.users[p].socketId).join(id);
+        // Add online participants to the room
+        participants.forEach(userId => {
+            if (userId in onlineUsers) {
+                let socketIds = onlineUsers[userId].sockets;
+                socketIds.forEach(socketId => {
+                    io.sockets.sockets.get(socketId).join(dbConv._id);
+                });
+            }
         });
-
-        // Store the group
-        data.conversations[id] = group;
 
         // Cast the new group to the participants
         io.to(id).emit('new-conversation', {
-            conversation: group,
-            conversationId: id
+            conversation: dbConv
         });
     });
 
+    //TODO Manage uploads with database
     socket.on('start-upload', (received) => {
         let { conversationId, fileName } = received;
         console.log('start upload ' + fileName);
@@ -200,42 +269,55 @@ io.on('connection', (socket) => {
     });
 });
 
-function sendMessage(convId, content, socket, specialMessage) {
-    let timestamp = new Date().getTime();
+async function sendMessage(convId, content, socket, specialMessage) {
+    let conv = await Conversation.findById(convId);
 
-    //TODO Check if user is part of conversation
+    if (!conv) {
+        socket.emit('error', { message: 'Conversation not found' });
+        return;
+    }
+
+    // If it's not the global convo && the user is not a participant of the convo
+    if (convId !== globalConvId && conv.participants.filter(value => value.toString() === socket.userId).length === 0) {
+        socket.emit('error', { message: "You can't message this conversation" });
+        return;
+    }
+
+    let message = {
+        sender: socket.userId,
+        senderName: socket.username,
+        content: content,
+        timestamp: Date.now(),
+        isSpecial: specialMessage
+    };
+
+    conv.messages.push(message);
+    await conv.save();
+
+    // Get the message inserted in the db because it is sanitized
+    let dbMsg = await Conversation.findById(convId).select('messages').slice('messages', -1);
 
     let response = {
-        message: {
-            sender: socket.username,
-            content: content,
-            timestamp: timestamp
-        },
+        message: dbMsg.messages[0],
         conversationId: convId
     }
 
-    if (specialMessage) {
-        response.message.special = true;
-    }
-
-    if (convId === 'global') {
-        data.globalMessages.push(response.message);
+    if (convId.toString() === globalConvId.toString()) {
         io.emit('message', response)
     } else {
-        let conv = data.conversations[convId];
-        if (!conv) {
-
-        }
-        data.conversations[convId].messages.push(response.message);
         io.to(convId).emit('message', response);
     }
 }
 
 // Emit the list of online users
-function emitUserList() {
-    let userlist = Object.keys(data.users).filter(username => data.users[username].online);
-    console.log("Broadcast user list: " + userlist.join(', '));
-    io.emit('user-list', userlist);
+async function emitUserList() {
+    let users = await User.find({
+        '_id': {
+            $in: Object.keys(onlineUsers)
+        }
+    }).select('_id username');
+
+    io.emit('user-list', users);
 }
 
 server.listen(3000, () => {
