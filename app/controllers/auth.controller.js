@@ -13,7 +13,7 @@ exports.signup = (req, res) => {
     });
 
     if (req.file) {
-        user.imageUrl = '/profile-pics/' + req.file.filename;
+        user.imageUrl = '/uploads/profile-pics/' + req.file.filename;
     }
 
     user.save(async (err, user) => {

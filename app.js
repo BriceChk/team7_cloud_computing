@@ -11,7 +11,7 @@ const dbConfig = require("./app/config/db.config");
 const authJwt = require('./app/middlewares/authJwt');
 const utils = require("./app/middlewares/utils");
 const multer = require("multer");
-const upload = multer({ dest: 'public/profile-pics/' });
+const upload = multer({ dest: 'public/uploads/profile-pics/' });
 
 const app = express().use(SocketIOFileUpload.router);
 const server = http.createServer(app);
