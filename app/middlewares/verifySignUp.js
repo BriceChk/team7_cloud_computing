@@ -30,7 +30,7 @@ checkDuplicateUsername = (req, res, next) => {
         }
 
         if (user) {
-            res.status(400).send({ message: "Failed! Username is already in use!" });
+            res.status(400).send({ message: "Username is already taken" });
             return;
         }
 
