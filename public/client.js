@@ -429,32 +429,14 @@ function populateMessageList() {
             let list = $('#group-user-list');
             list.empty();
             conv.participants.forEach(pId => {
-                if (pId in onlineUsers) {
-                    let clone = $('#models .user-item').clone();
-                    clone.find('.username').text();
-                    list.append(clone);
-                }
+                let u = getUserById(pId);
+                let clone = $('#models .user-item').clone();
+                clone.find('.username').text(u.username);
+                clone.find('img').attr('src', u.imageUrl);
+                list.append(clone);
             });
         }
     }
-}
-
-const wikiWords = ["albania", "germany", "andorra", "austria", "belgium", "belarus", "bulgaria", "cyprus", "croatia", "denmark", "spain", "estonia", "finland", "france", "greece", "hungary", "ireland", "iceland", "italy", "kosovo", "latvia", "liechtenstein", "lithuania", "luxembourg", "malta", "moldova", "monaco", "montenegro", "norway", "netherlands", "poland", "portugal", "romania", "uk", "russia", "serbia", "slovakia", "slovenia", "sweden", "swiss", "ukraine", "vatican", "tirana", "berlin", "vienna", "brussels", "minsk", "sarajevo", "sofia", "nicosia", "zagreb", "copenhagen", "madrid", "tallinn", "helsinki", "paris", "athens", "budapest", "dublin", "reykjavik", "rome", "pristina", "riga", "vaduz", "vilnius", "luxembourg", "skopje", "valletta", "chisinau", "monaco", "podgorica", "oslo", "amsterdam", "warsaw", "lisbon", "prague", "bucharest", "london", "moscow", "belgrade", "bratislava", "ljubljana", "stockholm", "bern", "kiev", "vatican"];
-
-function replaceWikiWords(text) {
-    let resultText = text;
-
-    let words = text.split(' ');
-    let alreadyReplaced = [];
-    for (let i = 0; i < words.length; i++) {
-        let word = words[i];
-        if (!alreadyReplaced.includes(word) && wikiWords.includes(word.toLowerCase())) {
-            alreadyReplaced.push(word);
-            resultText = resultText.replaceAll(word, `<a target="_blank" href="https://en.wikipedia.org/wiki/${word}">${word}</a>`);
-        }
-    }
-
-    return resultText;
 }
 
 function buildMessage(message) {
@@ -471,8 +453,7 @@ function buildMessage(message) {
         let fileName = parts[parts.length - 1];
         clone.find('.msg-content').html('<a target="_blank" href="' + message.content + '">' + fileName + '</a>');
     } else {
-        clone.find('.msg-content').text(message.content);
-        clone.find('.msg-content').html(replaceWikiWords(clone.find('.msg-content').text()));
+        clone.find('.msg-content').html(message.content);
     }
 
     let css = message.sender === user._id ? 'msg-sent' : 'msg-received';

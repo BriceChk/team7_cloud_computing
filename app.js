@@ -181,6 +181,10 @@ io.on('connection', (socket) => {
     // Function to send a message in the chat with the username
     socket.on('chat-message', (received) => {
         let {content, conversation} = received;
+
+        content = utils.sanitize(content);
+        content = utils.replaceWikiWords(content);
+
         sendMessage(conversation, content, socket);
     });
 
