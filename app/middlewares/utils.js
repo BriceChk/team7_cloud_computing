@@ -30,7 +30,7 @@ function replaceWikiWords(text) {
         let word = words[i];
         if (!alreadyReplaced.includes(word) && wikiWords.includes(word.toLowerCase())) {
             alreadyReplaced.push(word);
-            resultText = resultText.replaceAll(word, `<a target="_blank" href="https://en.wikipedia.org/wiki/${word}">${word}</a>`);
+            resultText = resultText.replaceAll(word, `<a target="_blank" href="https://en.wikipedia.org/wiki/${word.toLowerCase()}">${word}</a>`);
         }
     }
 
