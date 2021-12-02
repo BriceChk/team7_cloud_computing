@@ -12,6 +12,10 @@ exports.signup = (req, res) => {
         password: bcrypt.hashSync(req.body.password, 8)
     });
 
+    if (req.file) {
+        user.imageUrl = '/profile-pics/' + req.file.filename;
+    }
+
     user.save(async (err, user) => {
         if (err) {
             res.status(500).send({message: err});

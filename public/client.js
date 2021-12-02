@@ -220,23 +220,32 @@ function signup(usernameInput, passwordInput) {
         return;
     }
 
-    let json = {
-        username: username,
-        password: passwordInput
-    };
+    let formData = new FormData();
 
-    $.post('/api/auth/signup', json)
-        .done(function (data) {
-            console.log(data);
-            toast('Success', data.message, 'success');
-            $('#input-username-signup').text('');
-            $('#input-password-signup').text('');
-            $('#input-username').text(data.username);
-        })
-        .fail(function (jqXHR) {
-            let json = JSON.parse(jqXHR.responseText);
-            toast('Error', json.message, 'danger');
-        });
+    if ($('#profilePicInput').get(0).files.length !== 0) {
+        formData.append('profilePic', $('input[id=profilePicInput]')[0].files[0]);
+    }
+
+    formData.append('username', username);
+    formData.append('password', passwordInput);
+
+    $.ajax({
+        url: '/api/auth/signup',
+        type: 'POST',
+        contentType: false,
+        processData: false,
+        enctype: 'multipart/form-data',
+        data: formData
+    }).done(function (data) {
+        console.log(data);
+        toast('Success', data.message, 'success');
+        $('#input-username-signup').text('');
+        $('#input-password-signup').text('');
+        $('#input-username').text(data.username);
+    }).fail(function (jqXHR) {
+        let json = JSON.parse(jqXHR.responseText);
+        toast('Error', json.message, 'danger');
+    });
 }
 
 function logout() {
@@ -274,6 +283,7 @@ socket.on('user-list', function (data) {
     for (const u of data) {
         let clone = $('#models .user-item').clone();
         clone.find('.username').text(u.username);
+        clone.find('img').attr('src', u.imageUrl);
         if (user._id === u._id) {
             clone.find('a').show();
         } else {
@@ -429,6 +439,24 @@ function populateMessageList() {
     }
 }
 
+const wikiWords = ["albania", "germany", "andorra", "austria", "belgium", "belarus", "bulgaria", "cyprus", "croatia", "denmark", "spain", "estonia", "finland", "france", "greece", "hungary", "ireland", "iceland", "italy", "kosovo", "latvia", "liechtenstein", "lithuania", "luxembourg", "malta", "moldova", "monaco", "montenegro", "norway", "netherlands", "poland", "portugal", "romania", "uk", "russia", "serbia", "slovakia", "slovenia", "sweden", "swiss", "ukraine", "vatican", "tirana", "berlin", "vienna", "brussels", "minsk", "sarajevo", "sofia", "nicosia", "zagreb", "copenhagen", "madrid", "tallinn", "helsinki", "paris", "athens", "budapest", "dublin", "reykjavik", "rome", "pristina", "riga", "vaduz", "vilnius", "luxembourg", "skopje", "valletta", "chisinau", "monaco", "podgorica", "oslo", "amsterdam", "warsaw", "lisbon", "prague", "bucharest", "london", "moscow", "belgrade", "bratislava", "ljubljana", "stockholm", "bern", "kiev", "vatican"];
+
+function replaceWikiWords(text) {
+    let resultText = text;
+
+    let words = text.split(' ');
+    let alreadyReplaced = [];
+    for (let i = 0; i < words.length; i++) {
+        let word = words[i];
+        if (!alreadyReplaced.includes(word) && wikiWords.includes(word.toLowerCase())) {
+            alreadyReplaced.push(word);
+            resultText = resultText.replaceAll(word, `<a target="_blank" href="https://en.wikipedia.org/wiki/${word}">${word}</a>`);
+        }
+    }
+
+    return resultText;
+}
+
 function buildMessage(message) {
     if (message.isSpecial) {
         return $('<div class="special-msg">' + message.senderName + ' has ' + message.content + ' the chat</div>');
@@ -444,6 +472,7 @@ function buildMessage(message) {
         clone.find('.msg-content').html('<a target="_blank" href="' + message.content + '">' + fileName + '</a>');
     } else {
         clone.find('.msg-content').text(message.content);
+        clone.find('.msg-content').html(replaceWikiWords(clone.find('.msg-content').text()));
     }
 
     let css = message.sender === user._id ? 'msg-sent' : 'msg-received';

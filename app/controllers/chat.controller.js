@@ -19,7 +19,8 @@ exports.findUserById = (req, res) => {
 
         res.send({
             username: user.username,
-            id: user._id
+            id: user._id,
+            imageUrl: user.imageUrl
         });
     })
 };
@@ -34,7 +35,8 @@ exports.findUserByUsername = (req, res) => {
 
         res.send({
             username: user.username,
-            id: user._id
+            id: user._id,
+            imageUrl: user.imageUrl
         });
     })
 };
