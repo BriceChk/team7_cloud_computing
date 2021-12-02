@@ -1,3 +1,5 @@
+// AUTHORS: GROUP 7 - Mickaël BENASSE (805211), Brice CHKIR (805212), Joffrey COLLET (805213)
+
 removeItemOnce = (arr, value) => {
     let index = arr.indexOf(value);
     if (index > -1) {
