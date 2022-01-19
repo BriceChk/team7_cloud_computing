@@ -14,4 +14,5 @@ module.exports = function(app) {
 
     app.get("/api/user/findById", [authJwt.verifyToken], controller.findUserById);
     app.get("/api/user/findByUsername", [authJwt.verifyToken], controller.findUserByUsername);
+    app.get("/api/conversation/getConvMessages", [authJwt.verifyToken], controller.getConvMessages);
 };

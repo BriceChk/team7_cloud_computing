@@ -9,5 +9,6 @@ db.mongoose = mongoose;
 
 db.user = require("./user.model");
 db.conversation = require("./conversation.model");
+db.message = require("./message.model");
 
 module.exports = db;

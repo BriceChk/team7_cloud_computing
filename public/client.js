@@ -308,8 +308,6 @@ socket.on('message', function (received) {
 
     console.log('received message');
 
-    getConvById(conversationId.toString()).messages.push(message);
-
     if (conversationId.toString() === currentConversationId) {
         $('.messages-list').prepend(buildMessage(message));
     } else {
@@ -386,11 +384,28 @@ function getUserById(id) {
     return json;
 }
 
+function getConvMessages(id, olderThan) {
+    let jqXHR = $.ajax({
+        url: '/api/conversation/getConvMessages',
+        data: {
+            id: id,
+            olderThan: olderThan,
+        },
+        async: false,
+        dataType: 'json',
+        beforeSend: function (req) {
+            req.setRequestHeader('x-access-token', localStorage.getItem('accessToken'));
+        }
+    });
+
+    return JSON.parse(jqXHR.responseText);
+}
+
 function populateChatsList() {
     let convList = $('#chat-list');
     convList.empty();
 
-    //TODO Sort by last message timestamp & display content
+    //TODO display last message
     conversations.forEach(conv => {
         if (conv.isGlobal) {
             $('#global').attr('id', conv._id.toString());
@@ -421,27 +436,25 @@ function populateMessageList() {
 
     let msgList = $('.messages-list');
     msgList.empty();
-    let messages = conv.messages;
-    messages.sort((a, b) => a.timestamp < b.timestamp ? 1 : -1);
+
+    let messages = getConvMessages(conv._id);
     messages.forEach(msg => {
         msgList.append(buildMessage(msg));
     });
 
     let groupUserListContainer = $('#group-user-list-container');
     groupUserListContainer.hide();
-    if (!conv.isGlobal) {
-        if (conv.participants.length > 2) {
-            groupUserListContainer.show();
-            let list = $('#group-user-list');
-            list.empty();
-            conv.participants.forEach(pId => {
-                let u = getUserById(pId);
-                let clone = $('#models .user-item').clone();
-                clone.find('.username').text(u.username);
-                clone.find('img').attr('src', u.imageUrl);
-                list.append(clone);
-            });
-        }
+    if (!conv.isGlobal && conv.participants.length > 2) {
+        groupUserListContainer.show();
+        let list = $('#group-user-list');
+        list.empty();
+        conv.participants.forEach(pId => {
+            let u = getUserById(pId);
+            let clone = $('#models .user-item').clone();
+            clone.find('.username').text(u.username);
+            clone.find('img').attr('src', u.imageUrl);
+            list.append(clone);
+        });
     }
 }
 

@@ -19,6 +19,7 @@ const io = new Server(server);
 
 const User = db.user;
 const Conversation = db.conversation;
+const Message = db.message;
 
 let corsOptions = {
     origin: "http://localhost:3001"
@@ -139,6 +140,14 @@ io.on('connection', (socket) => {
         // Get all conversations where the user is a participant
         let convos = await Conversation.find({ participants: user });
 
+        // Get the last message for each conversation
+        for (const conv of convos) {
+            let last = await Message.find({ conversation: conv }).sort({ timestamp: -1 }).limit(1);
+            if (last.length !== 0) {
+                conv.lastMessage = last[0];
+            }
+        }
+
         // Join socket.io rooms (not the global one)
         for (let i = 0; i < convos.length; i++) {
             if (convos[i].isGlobal) continue;
@@ -192,28 +201,32 @@ io.on('connection', (socket) => {
     socket.on('new-direct-message', async (received) => {
         let {participants} = received;
 
-        // Build the message
-        let message = {
-            sender: socket.userId,
-            senderName: socket.username,
-            content: 'created',
-            isSpecial: true
-        }
-
         //TODO Check if a private convo already exists? Already done client-side but to make sure?
 
         // Add the new conversation to the DB
         let conv = new Conversation({
             participants: participants,
             name: '__private_chat__',
-            messages: [message]
         });
 
-        conv.save((error, result) => {
+        conv.save(async (error, result) => {
             if (error) {
-                socket.emit('error', { message: 'Could not create private conversation' });
+                socket.emit('error', {message: 'Could not create private conversation'});
                 return;
             }
+
+            // Build the message
+            let message = new Message({
+                sender: socket.userId,
+                senderName: socket.username,
+                readBy: [socket.userId],
+                content: 'created',
+                isSpecial: true,
+                conversation: result._id,
+            });
+
+            // Save message & add to convo
+            result.lastMessage = await message.save();
 
             // Subscribe the users to the room
             participants.forEach(userId => {
@@ -238,21 +251,24 @@ io.on('connection', (socket) => {
             return await User.exists({_id: value});
         })
 
-        // Build the message
-        let message = {
-            sender: socket.userId,
-            senderName: socket.username,
-            content: 'created',
-            isSpecial: true
-        }
-
         // Save convo in db
         let conv = new Conversation({
             participants: received.participants,
             name: received.name,
-            messages: [message]
         });
         let dbConv = await conv.save();
+
+        // Build the message
+        let message = new Message({
+            sender: socket.userId,
+            readBy: [socket.userId],
+            senderName: socket.username,
+            content: 'created',
+            isSpecial: true,
+            conversation: dbConv._id,
+        });
+        // Save message & add to conv data
+        dbConv.lastMessage = await message.save();
 
         // Add online participants to the room
         participants.forEach(userId => {
@@ -302,23 +318,21 @@ async function sendMessage(convId, content, socket, specialMessage, isUpload) {
         return;
     }
 
-    let message = {
+    let message = new Message({
         sender: socket.userId,
         senderName: socket.username,
+        readBy: [ socket.userId ],
+        conversation: convId,
         content: content,
         timestamp: Date.now(),
         isSpecial: specialMessage,
         isUpload: isUpload
-    };
+    });
 
-    conv.messages.push(message);
-    await conv.save();
-
-    // Get the message inserted in the db because it is sanitized
-    let dbMsg = await Conversation.findById(convId).select('messages').slice('messages', -1);
+    let msgDb = await message.save();
 
     let response = {
-        message: dbMsg.messages[0],
+        message: msgDb,
         conversationId: convId
     }
 
