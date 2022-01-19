@@ -204,6 +204,7 @@ function login(usernameInput, passwordInput) {
         .done(function (data) {
             user = data;
             localStorage.setItem('accessToken', data.accessToken);
+            localStorage.setItem('refreshToken', data.refreshToken);
             socket.emit('connect-jwt', {jwt: data.accessToken, id: socket.id});
         })
         .fail(function (jqXHR) {
@@ -251,6 +252,29 @@ function signup(usernameInput, passwordInput, passwordRepeat) {
         let json = JSON.parse(jqXHR.responseText);
         toast('Error', json.message, 'danger');
     });
+}
+
+function refreshToken() {
+    console.log('Token needs a refresh!');
+
+    let refresh = localStorage.getItem("refreshToken");
+
+    let json = {
+        refreshToken: refresh,
+    };
+
+    $.post('/api/auth/refresh-token', json)
+        .done(function (data) {
+            user = data;
+            localStorage.setItem('accessToken', data.accessToken);
+            localStorage.setItem('refreshToken', data.refreshToken);
+            socket.emit('connect-jwt', {jwt: data.accessToken, id: socket.id});
+        })
+        .fail(function () {
+            // Refresh token expired; show login page
+            localStorage.clear();
+            toast('Session expired', 'You need to re-login', 'danger');
+        });
 }
 
 function logout() {
@@ -324,6 +348,12 @@ socket.on('new-conversation', function (received) {
 
 socket.on('error', function (received) {
     console.log(received.message);
+
+    if (received.message === "Invalid JWT!") {
+        refreshToken();
+        return;
+    }
+
     toast('Error', received.message, 'danger');
 });
 

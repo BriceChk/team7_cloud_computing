@@ -10,5 +10,6 @@ db.mongoose = mongoose;
 db.user = require("./user.model");
 db.conversation = require("./conversation.model");
 db.message = require("./message.model");
+db.refreshToken = require("./refresh_token.model");
 
 module.exports = db;
