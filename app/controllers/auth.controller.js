@@ -8,10 +8,14 @@ const Conversation = db.conversation;
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 
+const SALT_WORK_FACTOR = 10;
+
 exports.signup = (req, res) => {
+    const salt = bcrypt.genSaltSync(SALT_WORK_FACTOR);
+
     const user = new User({
         username: req.body.username,
-        password: bcrypt.hashSync(req.body.password, 8)
+        password: bcrypt.hashSync(req.body.password, salt)
     });
 
     if (req.file) {
