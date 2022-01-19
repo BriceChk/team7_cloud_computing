@@ -40,9 +40,10 @@ $(document).ready(() => {
 
     let inputUsernameSignup = $('#input-username-signup');
     let inputPasswordSignup = $('#input-password-signup');
+    let inputPasswordSignupRepeat = $('#input-password-signup-repeat');
 
     $('#btn-signup').click(function () {
-        signup(inputUsernameSignup.val(), inputPasswordSignup.val());
+        signup(inputUsernameSignup.val(), inputPasswordSignup.val(), inputPasswordSignupRepeat.val());
     });
 
     inputPasswordSignup.keypress(function (ev) {
@@ -211,12 +212,17 @@ function login(usernameInput, passwordInput) {
         });
 }
 
-function signup(usernameInput, passwordInput) {
+function signup(usernameInput, passwordInput, passwordRepeat) {
     // Get the input of username
     let username = usernameInput.trim().replace(/ /g, '-');
     // Check if it's not blank
-    if (username === '' || passwordInput === '') {
+    if (username === '' || passwordInput === '' || passwordRepeat === '') {
         toast('Error', 'Invalid credentials', 'danger');
+        return;
+    }
+    // Check if repeated password match
+    if (passwordInput !== passwordRepeat) {
+        toast('Error', 'Password do not match', 'danger');
         return;
     }
 
