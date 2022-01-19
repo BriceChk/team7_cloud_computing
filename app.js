@@ -1,7 +1,29 @@
 // AUTHORS: GROUP 7 - Mickaël BENASSE (805211), Brice CHKIR (805212), Joffrey COLLET (805213)
 
+const keyPath = './app/certificates/privkey.pem';
+const certPath = './app/certificates/cert.pem';
+
+const fs = require('fs');
+let http, options = {};
+
+try {
+    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+        console.log('Using TLS');
+        http = require('https');
+        options = {
+            key: fs.readFileSync(keyPath),
+            cert: fs.readFileSync(certPath),
+        }
+    } else {
+        http = require('http');
+        console.log('Using HTTP');
+    }
+} catch (e) {
+    console.error(e);
+    http = require('http');
+}
+
 const express = require('express');
-const http = require('http');
 const {Server} = require("socket.io");
 const SocketIOFileUpload = require("socketio-file-upload");
 const bodyParser = require("body-parser");
@@ -14,7 +36,12 @@ const multer = require("multer");
 const upload = multer({ dest: 'public/uploads/profile-pics/' });
 
 const app = express().use(SocketIOFileUpload.router);
-const server = http.createServer(app);
+let server;
+if (options === {}) {
+    server = http.createServer(app);
+} else {
+    server = http.createServer(options, app);
+}
 const io = new Server(server);
 
 const User = db.user;
@@ -36,7 +63,7 @@ let globalConvId = '';
 db.mongoose
     .connect(`mongodb://${dbConfig.HOST}:${dbConfig.PORT}/${dbConfig.DB}`)
     .then(() => {
-        console.log("Successfully connect to MongoDB.");
+        console.log("Successfully connected to MongoDB.");
 
         // Create default Global conversation if it doesn't exist
         Conversation.findOne({ isGlobal: true }, (err, conv) => {

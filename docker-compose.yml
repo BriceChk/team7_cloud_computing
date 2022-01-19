@@ -1,18 +1,19 @@
 # AUTHORS: GROUP 7 - Mickaël BENASSE (805211), Brice CHKIR (805212), Joffrey COLLET (805213)
-version: "1.0"
+version: "3.3"
 services:
   chat-server:
     build: .
     container_name: chatserver
     ports:
-      - 80:3000
+      - "4000:3000"
     networks:
       - chatnetwork
     hostname: chatserver
     volumes:
       - chatfiles:/usr/src/app/public/uploads
+      - ./certificates:/usr/src/app/certificates
   userdb:
-    image: mongo:latest
+    image: mongo:4.4.11
     container_name: userdb
     volumes:
       - userdb:/data/db
