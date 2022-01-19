@@ -11,7 +11,7 @@ function toast(title, body, css) {
 
 function formatTimestamp(timestamp) {
     let date = new Date(timestamp);
-    return leadingZero(date.getDay()) + '/' + leadingZero(date.getMonth()) + '/' + date.getFullYear() + ' - ' + date.getHours() + ':' + leadingZero(date.getMinutes());
+    return leadingZero(date.getDate()) + '/' + leadingZero(date.getMonth() + 1) + '/' + date.getFullYear() + ' - ' + date.getHours() + ':' + leadingZero(date.getMinutes());
 }
 
 function leadingZero(number) {
