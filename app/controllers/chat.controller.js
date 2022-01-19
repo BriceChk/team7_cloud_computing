@@ -45,13 +45,18 @@ exports.getConvMessages = (req, res) => {
 
     Message.find({
         conversation: req.query.id,
-        timestamp: { $lte: timestamp }
-    }, null, { sort: { timestamp: -1 }, limit: 20 },
+        timestamp: { $lt: timestamp }
+    }, null, { sort: { timestamp: -1 }, limit: 21 },
         function (err, messages) {
         if (err) {
             return res.status(404).send({message: 'Error while getting messages'});
         }
 
-        res.send(messages);
+        // We get 21 last messages but only send 20 to know if there is more to load
+
+        res.send({
+            messages: messages.slice(0, 20),
+            hasOlderMessages: messages.length === 21,
+        });
     })
 };

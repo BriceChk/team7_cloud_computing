@@ -5,6 +5,7 @@ let user = null;
 let currentConversationId = 'global';
 let conversations = [];
 let onlineUsers = [];
+let oldestMessageTimestamp = Date.now();
 
 const uploader = new SocketIOFileUpload(socket);
 uploader.listenOnInput(document.getElementById("siofu_input"));
@@ -120,7 +121,6 @@ $(document).ready(() => {
             participants.sort();
 
             let privateConv = getPrivateConvWith(recipient._id);
-            console.log(privateConv);
 
             if (privateConv) {
                 // Click on the conversation in the sidebar to load it
@@ -243,7 +243,6 @@ function signup(usernameInput, passwordInput, passwordRepeat) {
         enctype: 'multipart/form-data',
         data: formData
     }).done(function (data) {
-        console.log(data);
         toast('Success', data.message, 'success');
         $('#input-username-signup').text('');
         $('#input-password-signup').text('');
@@ -306,8 +305,6 @@ socket.on('user-list', function (data) {
 socket.on('message', function (received) {
     let {conversationId, message} = received;
 
-    console.log('received message');
-
     if (conversationId.toString() === currentConversationId) {
         $('.messages-list').prepend(buildMessage(message));
     } else {
@@ -327,6 +324,7 @@ socket.on('new-conversation', function (received) {
 
 socket.on('error', function (received) {
     console.log(received.message);
+    toast('Error', received.message, 'danger');
 });
 
 socket.io.on("disconnect", () => {
@@ -437,10 +435,18 @@ function populateMessageList() {
     let msgList = $('.messages-list');
     msgList.empty();
 
-    let messages = getConvMessages(conv._id);
+    let { messages, hasOlderMessages } = getConvMessages(conv._id);
+
+    // Store oldest message on screen
+    if (messages.length !== 0) oldestMessageTimestamp = messages[messages.length - 1].timestamp;
+
     messages.forEach(msg => {
         msgList.append(buildMessage(msg));
     });
+
+    if (hasOlderMessages) {
+        msgList.append('<div class="special-msg py-2" id="load-more-btn"><button onclick="loadMore()" class="btn btn-primary">Load older messages</button></div>')
+    }
 
     let groupUserListContainer = $('#group-user-list-container');
     groupUserListContainer.hide();
@@ -455,6 +461,27 @@ function populateMessageList() {
             clone.find('img').attr('src', u.imageUrl);
             list.append(clone);
         });
+    }
+}
+
+function loadMore() {
+    let conv = getCurrentConv();
+    let msgList = $('.messages-list');
+
+    $('#load-more-btn').remove();
+
+    let { messages, hasOlderMessages } = getConvMessages(conv._id, oldestMessageTimestamp);
+
+    // Store oldest message on screen
+    if (messages.length !== 0) oldestMessageTimestamp = messages[messages.length - 1].timestamp;
+
+    // Sort messages the other way because we are prepending
+    messages.forEach(msg => {
+        msgList.append(buildMessage(msg));
+    });
+
+    if (hasOlderMessages) {
+        msgList.append('<div class="special-msg py-2" id="load-more-btn"><button onclick="loadMore()" class="btn btn-primary">Load older messages</button></div>')
     }
 }
 
