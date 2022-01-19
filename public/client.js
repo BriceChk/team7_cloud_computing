@@ -88,6 +88,10 @@ $(document).ready(() => {
 
         currentConversationId = $(this).attr('id');
         populateMessageList();
+
+        socket.emit('read-message', {
+            convId: currentConversationId
+        });
     });
 
     $('#btn-send').click(function () {
@@ -338,6 +342,9 @@ socket.on('message', function (received) {
 
     if (conversationId.toString() === currentConversationId) {
         $('.messages-list').prepend(buildMessage(message));
+        socket.emit('read-message', {
+            convId: currentConversationId
+        });
     } else {
         $('#' + conversationId).addClass('new-message');
     }
@@ -467,10 +474,14 @@ function populateChatsList() {
 
 function populateLastMessage(messages) {
     conversations.forEach(conv => {
-        let preview = $('#' + conv._id.toString()).find('.msg-preview');
+        let convEl = $('#' + conv._id.toString());
+        let preview = convEl.find('.msg-preview');
         if (messages[conv._id]) {
             let msg = messages[conv._id];
             preview.text(msg.senderName + ': ' + msg.content);
+            if (!msg.readBy.includes(user._id) && currentConversationId !== conv._id.toString()) {
+                convEl.addClass('new-message');
+            }
         } else {
             preview.text('New conversation');
         }

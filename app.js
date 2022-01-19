@@ -226,6 +226,22 @@ io.on('connection', (socket) => {
         sendMessage(conversation, content, socket);
     });
 
+    // Function to mark message as read
+    socket.on('read-message', async (received) => {
+        let { convId } = received;
+
+        let msgQuery = await Message.find({ conversation: convId }).sort({ timestamp: -1 }).limit(1);
+
+        if (msgQuery.length !== 0) {
+            let msg = msgQuery[0];
+            let readBy = msg.readBy;
+            readBy.push(socket.userId);
+            Message.findByIdAndUpdate(msg._id, {
+                readBy: readBy,
+            });
+        }
+    });
+
     // Function to create a new private conversation
     socket.on('new-direct-message', async (received) => {
         let {participants} = received;
@@ -296,8 +312,7 @@ io.on('connection', (socket) => {
             isSpecial: true,
             conversation: dbConv._id,
         });
-        // Save message & add to conv data
-        dbConv.lastMessage = await message.save();
+        await message.save();
 
         // Add online participants to the room
         participants.forEach(userId => {
