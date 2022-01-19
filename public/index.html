@@ -71,7 +71,9 @@ AUTHORS: GROUP 7 - Mickaël BENASSE (805211), Brice CHKIR (805212), Joffrey COLL
             </div>
             <div class="pt-3" id="chat-list-parent">
                 <div class="conversation-item active" id="global">
-                    Global room
+                    <strong><span class="conv-name">Global room</span></strong>
+                    <span class="text-muted msg-preview"></span>
+
                 </div>
                 <hr>
                 <button class="btn btn-primary w-100 mb-1" data-bs-toggle="modal" data-bs-target="#privateMessageModal">Private message</button>
@@ -136,6 +138,11 @@ AUTHORS: GROUP 7 - Mickaël BENASSE (805211), Brice CHKIR (805212), Joffrey COLL
         <div class="msg-timestamp"></div>
         <div class="msg-sender fw-bold"></div>
         <div class="msg-content"></div>
+    </div>
+
+    <div class="conversation-item">
+        <strong><span class="conv-name"></span></strong>
+        <span class="text-muted msg-preview">New conversation</span>
     </div>
 </div>
 

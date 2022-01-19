@@ -88,7 +88,6 @@ $(document).ready(() => {
 
         currentConversationId = $(this).attr('id');
         populateMessageList();
-        //TODO Show participants list
     });
 
     $('#btn-send').click(function () {
@@ -246,9 +245,11 @@ function signup(usernameInput, passwordInput, passwordRepeat) {
         data: formData
     }).done(function (data) {
         toast('Success', data.message, 'success');
-        $('#input-username-signup').text('');
-        $('#input-password-signup').text('');
-        $('#input-username').text(data.username);
+        $('#input-username-signup').val('');
+        $('#input-password-signup').val('');
+        $('#input-password-signup-repeat').val('');
+        $('#input-username').val(data.username);
+
     }).fail(function (jqXHR) {
         let json = JSON.parse(jqXHR.responseText);
         toast('Error', json.message, 'danger');
@@ -290,6 +291,7 @@ socket.on('successful-login', function (received) {
 
     // Build conversations list
     populateChatsList();
+    populateLastMessage(received.lastMessages);
 
     populateMessageList();
 
@@ -339,6 +341,8 @@ socket.on('message', function (received) {
     } else {
         $('#' + conversationId).addClass('new-message');
     }
+
+    $('#' + conversationId + ' .msg-preview').text(`${message.senderName}: ${message.content}`);
 });
 
 socket.on('new-conversation', function (received) {
@@ -438,7 +442,6 @@ function populateChatsList() {
     let convList = $('#chat-list');
     convList.empty();
 
-    //TODO display last message
     conversations.forEach(conv => {
         if (conv.isGlobal) {
             $('#global').attr('id', conv._id.toString());
@@ -446,7 +449,7 @@ function populateChatsList() {
                 currentConversationId = conv._id.toString();
             }
         } else {
-            let el = $('<div class="conversation-item"></div>');
+            let el = $('#models .conversation-item').clone();
             el.attr('id', conv._id.toString());
             if (conv._id === currentConversationId) {
                 el.addClass('active');
@@ -456,24 +459,39 @@ function populateChatsList() {
                 // If this is a private chat between 2 persons, use the other person name as a conversation name
                 name = getUserById(conv.participants.filter(uId => uId !== user._id)[0]).username;
             }
-            el.text(name);
+            el.find('.conv-name').text(name);
             convList.append(el);
         }
     })
 }
 
+function populateLastMessage(messages) {
+    conversations.forEach(conv => {
+        let preview = $('#' + conv._id.toString()).find('.msg-preview');
+        if (messages[conv._id]) {
+            let msg = messages[conv._id];
+            preview.text(msg.senderName + ': ' + msg.content);
+        } else {
+            preview.text('New conversation');
+        }
+    });
+}
+
 function populateMessageList() {
     let conv = getCurrentConv();
 
-    $('#current-conv-title').text($('#' + conv._id).text());
+    $('#current-conv-title').text($('#' + conv._id + ' .conv-name').text());
 
     let msgList = $('.messages-list');
     msgList.empty();
 
     let { messages, hasOlderMessages } = getConvMessages(conv._id);
 
-    // Store oldest message on screen
-    if (messages.length !== 0) oldestMessageTimestamp = messages[messages.length - 1].timestamp;
+    // Store oldest message on screen & last message id
+    if (messages.length !== 0) {
+        oldestMessageTimestamp = messages[messages.length - 1].timestamp;
+        lastMessageId = messages[0]._id;
+    }
 
     messages.forEach(msg => {
         msgList.append(buildMessage(msg));

@@ -168,17 +168,18 @@ io.on('connection', (socket) => {
         let convos = await Conversation.find({ participants: user });
 
         // Get the last message for each conversation
-        for (const conv of convos) {
-            let last = await Message.find({ conversation: conv }).sort({ timestamp: -1 }).limit(1);
-            if (last.length !== 0) {
-                conv.lastMessage = last[0];
-            }
-        }
-
         // Join socket.io rooms (not the global one)
+        let lastMessages = {};
+
         for (let i = 0; i < convos.length; i++) {
-            if (convos[i].isGlobal) continue;
-            socket.join(convos[i]._id.toString());
+            let conv = convos[i];
+            let last = await Message.find({ conversation: conv._id }).sort({ timestamp: -1 }).limit(1);
+            if (last.length !== 0) {
+                lastMessages[conv._id] = last[0];
+            }
+
+            if (conv.isGlobal) continue;
+            socket.join(conv._id.toString());
         }
 
         emitUserList();
@@ -186,6 +187,7 @@ io.on('connection', (socket) => {
         // Send conversations to the user
         socket.emit('successful-login', {
             conversations: convos,
+            lastMessages: lastMessages,
             user: {
                 _id: userId,
                 username: user.username
