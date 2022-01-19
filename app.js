@@ -92,10 +92,21 @@ require('./app/routes/chat.routes')(app);
 // List connected users
 let onlineUsers = {};
 
+//Prometheus
+const client = require('prom-client');
+const responseTime = require('response-time');
+const collectDefaultMetrics = client.collectDefaultMetrics;
+collectDefaultMetrics({ timeout: 5000 });
+
 // Serve client files
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/public/index.html');
     hostname = req.header('host');
+});
+
+app.get("/metrics", async (req, res) => {
+    res.set("Content-Type", client.register.contentType);
+    res.send(await client.register.metrics());
 });
 
 app.use(express.static('public'));

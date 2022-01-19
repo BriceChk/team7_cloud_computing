@@ -1,5 +1,5 @@
 # AUTHORS: GROUP 7 - Mickaël BENASSE (805211), Brice CHKIR (805212), Joffrey COLLET (805213)
-version: "3.3"
+version: "2.0"
 services:
   chat-server:
     build: .
@@ -20,6 +20,39 @@ services:
     networks:
       - chatnetwork
     hostname: userdb
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    user: root
+    networks:
+      - chatnetwork
+    ports:
+      - "9090:9090"
+    volumes:
+      - "/mnt/zfs/appdata/prometheus/prometheus:/prometheus"
+      - ./config/:/etc/prometheus/
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    user: root
+    networks:
+      - chatnetwork
+    ports:
+      - 3000:3000
+    volumes:
+      - "/mnt/zfs/appdata/grafana/grafana-data:/var/lib/grafana"
+    restart: unless-stopped
+  mongodb_exporter:
+    networks:
+      - chatnetwork
+    image: bitnami/mongodb-exporter:latest
+    container_name: mongodb_exporter
+    restart: unless-stopped
+    command:
+      - "--mongodb.uri=mongodb://userdb:27017/chatserver"
 
 volumes:
   userdb:
