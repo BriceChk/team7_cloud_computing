@@ -236,9 +236,10 @@ io.on('connection', (socket) => {
             let msg = msgQuery[0];
             let readBy = msg.readBy;
             readBy.push(socket.userId);
-            Message.findByIdAndUpdate(msg._id, {
+            let updated = await Message.findByIdAndUpdate(msg._id, {
                 readBy: readBy,
             });
+            console.log(updated);
         }
     });
 

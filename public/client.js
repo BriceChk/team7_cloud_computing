@@ -349,7 +349,8 @@ socket.on('message', function (received) {
         $('#' + conversationId).addClass('new-message');
     }
 
-    $('#' + conversationId + ' .msg-preview').text(`${message.senderName}: ${message.content}`);
+    let content = $(`<p>${message.content}</p>`).text();
+    $('#' + conversationId + ' .msg-preview').text(`${message.senderName}: ${content}`);
 });
 
 socket.on('new-conversation', function (received) {
@@ -478,7 +479,8 @@ function populateLastMessage(messages) {
         let preview = convEl.find('.msg-preview');
         if (messages[conv._id]) {
             let msg = messages[conv._id];
-            preview.text(msg.senderName + ': ' + msg.content);
+            let content = $('<p>' + msg.content + '</p>').text();
+            preview.text(msg.senderName + ': ' + content);
             if (!msg.readBy.includes(user._id) && currentConversationId !== conv._id.toString()) {
                 convEl.addClass('new-message');
             }
