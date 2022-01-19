@@ -6,6 +6,7 @@ let currentConversationId = 'global';
 let conversations = [];
 let onlineUsers = [];
 let oldestMessageTimestamp = Date.now();
+let lastMessageId = '';
 
 const uploader = new SocketIOFileUpload(socket);
 uploader.listenOnInput(document.getElementById("siofu_input"));
@@ -47,7 +48,7 @@ $(document).ready(() => {
         signup(inputUsernameSignup.val(), inputPasswordSignup.val(), inputPasswordSignupRepeat.val());
     });
 
-    inputPasswordSignup.keypress(function (ev) {
+    inputPasswordSignupRepeat.keypress(function (ev) {
         if (ev.keyCode === 13) {
             $('#btn-signup').click();
         }
@@ -328,6 +329,10 @@ socket.on('user-list', function (data) {
 
 socket.on('message', function (received) {
     let {conversationId, message} = received;
+
+    // Avoid double message on join
+    if (lastMessageId === message._id) return;
+    lastMessageId = message._id;
 
     if (conversationId.toString() === currentConversationId) {
         $('.messages-list').prepend(buildMessage(message));
