@@ -4,13 +4,13 @@ const keyPath = './app/certificates/privkey.pem';
 const certPath = './app/certificates/cert.pem';
 
 const fs = require('fs');
-let http, options = {};
+let http, httpsOptions = {};
 
 try {
     if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
         console.log('Using TLS');
         http = require('https');
-        options = {
+        httpsOptions = {
             key: fs.readFileSync(keyPath),
             cert: fs.readFileSync(certPath),
         }
@@ -37,10 +37,10 @@ const upload = multer({ dest: 'public/uploads/profile-pics/' });
 
 const app = express().use(SocketIOFileUpload.router);
 let server;
-if (options === {}) {
+if (httpsOptions === {}) {
     server = http.createServer(app);
 } else {
-    server = http.createServer(options, app);
+    server = http.createServer(httpsOptions, app);
 }
 const io = new Server(server);
 
@@ -381,6 +381,10 @@ async function emitUserList() {
     io.emit('user-list', users);
 }
 
-server.listen(3000, () => {
-    console.log('listening on *:3000');
+server.listen(4000, () => {
+    if (httpsOptions === {}) {
+        console.log('listening on http://localhost:4000');
+    } else {
+        console.log('listening on https://yourdomain:4000');
+    }
 });
