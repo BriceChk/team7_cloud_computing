@@ -12,6 +12,7 @@ services:
     volumes:
       - chatfiles:/usr/src/app/public/uploads
       - ./certificates:/usr/src/app/certificates
+
   userdb:
     image: mongo:4.4.11
     container_name: userdb
@@ -20,6 +21,7 @@ services:
     networks:
       - chatnetwork
     hostname: userdb
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -41,7 +43,7 @@ services:
     networks:
       - chatnetwork
     ports:
-      - 3000:3000
+      - "3000:3000"
     volumes:
       - "/mnt/zfs/appdata/grafana/grafana-data:/var/lib/grafana"
     restart: unless-stopped
