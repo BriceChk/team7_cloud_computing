@@ -94,9 +94,10 @@ let onlineUsers = {};
 
 //Prometheus
 const client = require('prom-client');
-const responseTime = require('response-time');
+const register = new client.Registry()
 const collectDefaultMetrics = client.collectDefaultMetrics;
-collectDefaultMetrics({ timeout: 5000 });
+collectDefaultMetrics();
+client.collectDefaultMetrics({ register });
 
 // Serve client files
 app.get('/', (req, res) => {
@@ -105,8 +106,8 @@ app.get('/', (req, res) => {
 });
 
 app.get("/metrics", async (req, res) => {
-    res.set("Content-Type", client.register.contentType);
-    res.send(await client.register.metrics());
+    res.set("Content-Type", register.contentType);
+    res.send(await register.metrics());
 });
 
 app.use(express.static('public'));
